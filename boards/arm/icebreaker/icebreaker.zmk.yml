@@ -1,0 +1,11 @@
+file_format: "1"
+id: icebreaker
+name: Icebreaker
+type: board
+arch: arm
+features:
+  - keys
+  - encoder
+outputs:
+  - usb
+url: https://serene.industries
