@@ -12,5 +12,4 @@
 #     shield: reviung41
 #
 ---
-include:
-  - board: icebreaker
+board: [icebreaker]
