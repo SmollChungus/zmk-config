@@ -1,6 +1,6 @@
 file_format: "1"
 id: icebreaker
-name: Icebreaker
+name: icebreaker
 type: board
 arch: arm
 features:
@@ -8,4 +8,4 @@ features:
   - encoder
 outputs:
   - usb
-url: https://serene.industries
+url: https://github.com/smollchungus
