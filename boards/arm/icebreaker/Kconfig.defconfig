@@ -1,34 +1,34 @@
-# Enable deep sleep
-CONFIG_ZMK_SLEEP=y
+# Copyright (c) 2020 The ZMK Contributors
+# SPDX-License-Identifier: MIT
 
-# Enable MPU
-CONFIG_ARM_MPU=y
+if BOARD_ICEBREAKER
 
-# Enable GPIO
-CONFIG_GPIO=y
+config ZMK_KEYBOARD_NAME
+	default "icebreaker"
 
-CONFIG_USE_DT_CODE_PARTITION=y
-CONFIG_BUILD_OUTPUT_UF2=y
+if USB
 
-CONFIG_MPU_ALLOW_FLASH_WRITE=y
-CONFIG_NVS=y
-CONFIG_SETTINGS_NVS=y
-CONFIG_FLASH=y
-CONFIG_FLASH_PAGE_LAYOUT=y
-CONFIG_FLASH_MAP=y
+config USB_NRFX
+	default y
 
-# Enable I2C
-CONFIG_I2C=y
-CONFIG_I2C_NRFX=y
+config USB_DEVICE_STACK
+	default y
 
-CONFIG_PINCTRL=y
+endif # USB
 
-# Windows Battery Reporting Fix
-CONFIG_BT_GATT_ENFORCE_SUBSCRIPTION=n
+config BT_CTLR
+	default BT
 
-# Turn on logging, and set ZMK logging to debug output
-# CONFIG_LOG=y
-# CONFIG_ZMK_USB_LOGGING=y
-# CONFIG_ZMK_LOG_LEVEL_DBG=y
-# CONFIG_I2C_LOG_LEVEL_DBG=y
-# CONFIG_SENSOR_LOG_LEVEL_DBG=y
+config ZMK_BLE
+	default y
+
+config ZMK_USB
+	default y
+
+config I2C
+	default y
+
+config MAX17048
+	default y
+
+endif # BOARD_ICEBREAKER
