@@ -89,7 +89,7 @@
 	status = "okay";
 };
 
-&usbd {
+zephyr_udc0: &usbd {
     status = "okay";
 };
 
