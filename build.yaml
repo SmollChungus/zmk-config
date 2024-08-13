@@ -14,4 +14,3 @@
 ---
 include:
   - board: icebreaker
-  - snippet: zmk-usb-logging #remove 
