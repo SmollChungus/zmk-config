@@ -28,6 +28,4 @@ config MAX17048
 	default y
 
 
-endif
-
 endif # BOARD_ICEBREAKER
