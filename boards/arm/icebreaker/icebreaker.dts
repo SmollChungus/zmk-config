@@ -62,7 +62,7 @@
 			, <&gpio0 20 GPIO_ACTIVE_HIGH>
 			, <&gpio0 17 GPIO_ACTIVE_HIGH>
 			, <&gpio0 15 GPIO_ACTIVE_HIGH>
-			, <&gpio0 13 GPIO_ACTIVE_HIGH>
+			, <&gpio0 28 GPIO_ACTIVE_HIGH>
 			, <&gpio0 24 GPIO_ACTIVE_HIGH>
 			
             ;
@@ -168,13 +168,13 @@ zephyr_udc0: &usbd {
 &pinctrl {
     spi3_default: spi3_default {
         group1 {
-            psels = <NRF_PSEL(SPIM_MOSI, 0, 28)>;
+            psels = <NRF_PSEL(SPIM_MOSI, 0, 13)>;
         };
     };
 
     spi3_sleep: spi3_sleep {
         group1 {
-            psels = <NRF_PSEL(SPIM_MOSI, 0, 28)>;
+            psels = <NRF_PSEL(SPIM_MOSI, 0, 13)>;
             low-power-enable;
         };
     };
