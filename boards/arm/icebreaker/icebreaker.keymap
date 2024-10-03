@@ -36,11 +36,11 @@
 
         1 {
             bindings = <
-                &kp ESC    &rgb_ug RGB_BRI  &rgb_ig_BRD      &kp F3          &kp F4   &kp F5  &kp F6    &kp F7   &kp F8    &kp F9    &kp F10    &kp F11       &kp F12      &kp BSLH  &kp DEL  &bt BT_CLR 
-                &kp TAB    &rgb_ug RGB_SAI  &rgb_ug RGB_SAD  &kp E &kp R    &kp T   &kp Y     &kp U    &kp I     &kp O     &kp P      &kp LBKT      &kp RBKT     &kp B SPC         &bootloader   
-                &kp CAPS   &rgb_ug RGB_HUI  &rgb_ug RGB_HUD  &kp D           &kp F    &kp G   &kp H     &kp J    &kp K     &kp L     &kp SEMI   &kp SQT       &kp ENTER                      &kp PG_DN  
-                &kp LSHFT                   &rgb_ug RGB_TOG  &rgb_ug RGB_EFF  &kp C    &kp V   &kp B     &kp N    &kp M     &kp COMMA &kp DOT    &kp SLASH     &kp C_PP     &kp C_VOL_UP      &mo LOWER       
-                &kp LCTL   &kp LGUI         &kp LALT                         &kp SPACE                                               &kp RALT   &kp RCTRL     &kp C_PREV   &kp C_VOL_DN      &kp C_NEXT  
+                &kp ESC    &rgb_ug RGB_BRI  &rgb_ig_BRD      &kp F3           &kp F4   &kp F5 &kp F6     &kp F7   &kp F8    &kp F9    &kp F10    &kp F11    &kp F12    &kp BSLH     &kp DEL  &bt BT_CLR 
+                &kp TAB    &rgb_ug RGB_SAI  &rgb_ug RGB_SAD  &kp E            &kp R    &kp T  &kp Y      &kp U    &kp I     &kp O     &kp P      &kp LBKT   &kp RBKT   &kp BSPC              &bootloader   
+                &kp CAPS   &rgb_ug RGB_HUI  &rgb_ug RGB_HUD  &kp D            &kp F    &kp G  &kp H      &kp J    &kp K     &kp L     &kp SEMI   &kp SQT    &kp ENTER                        &kp PG_DN  
+                &kp LSHFT                   &rgb_ug RGB_TOG  &rgb_ug RGB_EFF  &kp C    &kp V  &kp B      &kp N    &kp M     &kp COMMA &kp DOT    &kp SLASH  &kp C_PP   &kp C_VOL_UP          &mo LOWER       
+                &kp LCTL   &kp LGUI         &kp LALT                                          &kp SPACE                               &kp RALT   &kp RCTRL  &kp C_PREV &kp C_VOL_DN          &kp C_NEXT  
             >;
         };
     };
