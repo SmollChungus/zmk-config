@@ -188,8 +188,3 @@ zephyr_udc0: &usbd {
     pinctrl-names = "default", "sleep";
 };
 
-/ {
-    chosen {
-        zmk,underglow = &led_strip;
-    };
-};
