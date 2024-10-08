@@ -5,8 +5,11 @@ extern void ws2812_turn_all_blue(uint16_t num_leds);
 static int ws2812_init(const struct device *dev) {
     ARG_UNUSED(dev);
 
+    // Set the number of LEDs (adjust as needed)
+    uint16_t num_leds = 3;
+
     // Turn all LEDs blue
-    ws2812_turn_all_blue(3);
+    ws2812_turn_all_blue(num_leds);
 
     return 0;
 }
