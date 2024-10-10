@@ -6,7 +6,7 @@ manifest:
       url-base: https://github.com/smollchungus
   projects:
     - name: zmk
-      remote: zmkfirmware
+      remote: smollchungus
       revision: main
       import: app/west.yml
   self:
