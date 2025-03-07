@@ -8,12 +8,21 @@
 #include <dt-bindings/zmk/keys.h>
 #include <dt-bindings/zmk/rgb.h>
 
+// Define a custom behavior for entering the STM32 bootloader
+/ {
+    behaviors {
+        stm32_bootloader: stm32_bootloader {
+            compatible = "zmk,behavior-reset";
+            label = "STM32_BOOTLOADER";
+            #binding-cells = <0>;
+            type = "bootloader";
+        };
+    };
+};
 
 #define DEFAULT 0
 #define LOWER   1
 #define RAISE   2
-
-
 
 &encoder {
     status = "okay";
@@ -46,7 +55,7 @@
         
         2 {
             bindings = <
-                &bootloader &kp N1     &kp N2     &kp N3    &kp N4   &kp N5    &kp N6     &kp N7       &kp N8    &kp N9    &kp N0   &kp MINUS &kp EQUAL &kp BSLH   &kp DEL      &kp GRAVE
+                &stm32_bootloader &kp N1     &kp N2     &kp N3    &kp N4   &kp N5    &kp N6     &kp N7       &kp N8    &kp N9    &kp N0   &kp MINUS &kp EQUAL &kp BSLH   &kp DEL      &kp GRAVE
                 &kp TAB     &trans     &trans     &kp E     &kp R    &kp T     &kp Y      &kp U        &kp I     &kp O     &kp P    &kp LBKT  &kp RBKT  &kp BSPC   &kp HOME   
                 &kp CAPS    &kp A      &kp S      &kp D     &kp F    &kp G     &kp H      &kp J        &kp K     &kp L     &kp SEMI &kp SQT   &kp ENTER &kp END
                 &kp LSHFT   &kp K_MUTE &trans     &kp X     &kp C    &kp V     &kp B      &kp N        &kp M     &kp COMMA &kp DOT  &kp SLASH &kp RSHFT &kp UP     &mo 1       
