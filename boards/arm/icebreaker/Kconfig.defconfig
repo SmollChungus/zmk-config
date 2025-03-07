@@ -6,16 +6,7 @@ if BOARD_ICEBREAKER
 config ZMK_KEYBOARD_NAME
 	default "icebreaker"
 
-config USB_NRFX
-	default y
-
 config USB_DEVICE_STACK
-	default y
-
-config BT_CTLR
-	default BT
-
-config ZMK_BLE
 	default y
 
 config ZMK_USB
@@ -23,9 +14,5 @@ config ZMK_USB
 
 config I2C
 	default y
-
-config MAX17048
-	default y
-
 
 endif # BOARD_ICEBREAKER

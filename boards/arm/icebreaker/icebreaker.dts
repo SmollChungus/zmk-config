@@ -5,19 +5,19 @@
  */
 
 /dts-v1/;
-#include <nordic/nrf52840_qiaa.dtsi>
+#include <st/f4/stm32f411Xe.dtsi>
+#include <st/f4/stm32f411c(e-u)tx-pinctrl.dtsi>
 #include <dt-bindings/zmk/matrix_transform.h>
 #include <dt-bindings/led/led.h>
 
 / {
-	model = "icebreaker, rev_1"; 
-	compatible = "icebreaker,rev_1";
+	model = "icebreaker, rev_2"; 
+	compatible = "icebreaker,rev_2";
 
 	chosen {
 		zephyr,code-partition = &code_partition;
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
-		zmk,battery = &fuelgauge;
 		zmk,kscan = &kscan0;
 		zmk,matrix_transform = &default_transform;
 	};
@@ -40,203 +40,128 @@
 		compatible = "zmk,kscan-gpio-matrix";
 		diode-direction = "col2row";
 		row-gpios
-			= <&gpio0 3 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
-			, <&gpio1  13 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
-			, <&gpio0  30 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
-			, <&gpio0 31 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
-			, <&gpio1 11 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
-
+			= <&gpioa 0 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+			, <&gpioa 1 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+			, <&gpioa 2 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+			, <&gpioa 3 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+			, <&gpioa 4 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
 			;
 		col-gpios
-			= <&gpio0 26 GPIO_ACTIVE_HIGH>
-			, <&gpio0 6 GPIO_ACTIVE_HIGH>
-			, <&gpio0  8 GPIO_ACTIVE_HIGH>
-			, <&gpio0  4 GPIO_ACTIVE_HIGH>
-			, <&gpio0  7 GPIO_ACTIVE_HIGH>
-			, <&gpio0 28 GPIO_ACTIVE_HIGH>
-			, <&gpio0  9 GPIO_ACTIVE_HIGH>
-			, <&gpio0  10 GPIO_ACTIVE_HIGH>
-			, <&gpio1  6 GPIO_ACTIVE_HIGH>
-			, <&gpio1 4 GPIO_ACTIVE_HIGH>
-			, <&gpio0 22 GPIO_ACTIVE_HIGH>
-			, <&gpio0 20 GPIO_ACTIVE_HIGH>
-			, <&gpio0 17 GPIO_ACTIVE_HIGH>
-			, <&gpio0 15 GPIO_ACTIVE_HIGH>
-			, <&gpio0 24 GPIO_ACTIVE_HIGH>
-			
-            ;
+			= <&gpiob 0 GPIO_ACTIVE_HIGH>
+			, <&gpiob 1 GPIO_ACTIVE_HIGH>
+			, <&gpiob 2 GPIO_ACTIVE_HIGH>
+			, <&gpiob 3 GPIO_ACTIVE_HIGH>
+			, <&gpiob 4 GPIO_ACTIVE_HIGH>
+			, <&gpiob 5 GPIO_ACTIVE_HIGH>
+			, <&gpiob 6 GPIO_ACTIVE_HIGH>
+			, <&gpiob 7 GPIO_ACTIVE_HIGH>
+			, <&gpiob 8 GPIO_ACTIVE_HIGH>
+			, <&gpiob 9 GPIO_ACTIVE_HIGH>
+			, <&gpiob 10 GPIO_ACTIVE_HIGH>
+			, <&gpiob 12 GPIO_ACTIVE_HIGH>
+			, <&gpiob 13 GPIO_ACTIVE_HIGH>
+			, <&gpiob 14 GPIO_ACTIVE_HIGH>
+			, <&gpiob 15 GPIO_ACTIVE_HIGH>
+			;
 	};
 	encoder: encoder {
     	compatible = "alps,ec11";
-        a-gpios = <&gpio0 2 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
-        b-gpios = <&gpio0 29 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
+        a-gpios = <&gpioa 5 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
+        b-gpios = <&gpioa 6 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
         steps = <80>;
         status = "disabled";
-		};
+	}; // todo fix pins
 		
 	sensors: sensors {
 		compatible = "zmk,keymap-sensors";
 		sensors = <&encoder>;
 		triggers-per-rotation = <20>;
     };
+
 };
 
-&gpio0 {
+
+
+&clk_hse {
+	status = "okay";
+	clock-frequency = <DT_FREQ_M(25)>;
+};
+
+&pll {
+	div-m = <25>;
+	mul-n = <192>;
+	div-p = <2>;
+	div-q = <4>;
+	clocks = <&clk_hse>;
 	status = "okay";
 };
 
-&gpio1 {
+&rcc {
+	clocks = <&pll>;
+	clock-frequency = <DT_FREQ_M(96)>;
+	ahb-prescaler = <1>;
+	apb1-prescaler = <2>;
+	apb2-prescaler = <1>;
+};
+
+&usart1 {
+	pinctrl-0 = <&usart1_tx_pa9 &usart1_rx_pa10>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
 	status = "okay";
 };
 
-zephyr_udc0: &usbd {
-    status = "okay";
-};
-
-&pinctrl { 
-    	i2c0_default: i2c0_default {
-    	    group1 {
-                psels = <NRF_PSEL(TWIM_SDA, 0, 5)>,
-                	<NRF_PSEL(TWIM_SCL, 1, 9)>;
-            };
-       };
-    	i2c0_sleep: i2c0_sleep {
-            group1 {
-                psels = <NRF_PSEL(TWIM_SDA, 0, 5)>,
-                	<NRF_PSEL(TWIM_SCL, 1, 9)>;
-                low-power-enable;
-            };
-       };
-};
-
-&i2c0 {
+&spi1 {
 	status = "okay";
-	compatible = "nordic,nrf-twim";
-	pinctrl-0 = <&i2c0_default>;
-    pinctrl-1 = <&i2c0_sleep>;
-    pinctrl-names = "default", "sleep";
-	clock-frequency = <100000>;
+	pinctrl-0 = <&spi1_sck_pa5 &spi1_miso_pa6 &spi1_mosi_pa7>;
+	pinctrl-names = "default";
+	cs-gpios = <&gpioa 15 GPIO_ACTIVE_LOW>;
 
-	fuelgauge: max17048@36 {
-		compatible = "zmk,maxim-max17048";
-		reg = <0x36>;
+	led_strip: ws2812@0 {
+		compatible = "worldsemi,ws2812-spi";
+		reg = <0>;
+		spi-max-frequency = <4000000>;
+		chain-length = <68>; /* number of LEDs */
+		spi-one-frame = <0x70>;
+		spi-zero-frame = <0x40>;
+		color-mapping = <LED_COLOR_ID_GREEN
+						LED_COLOR_ID_RED
+						LED_COLOR_ID_BLUE>;
 	};
 };
 
 &flash0 {
-	/*
-	 * For more information, see:
-	 * http://docs.zephyrproject.org/latest/devices/dts/flash_partitions.html
-	 */
 	partitions {
 		compatible = "fixed-partitions";
 		#address-cells = <1>;
 		#size-cells = <1>;
 
-		sd_partition: partition@0 {
-			label = "softdevice";
-			reg = <0x00000000 0x00026000>;
+		boot_partition: partition@0 {
+			label = "bootloader";
+			reg = <0x00000000 0x00010000>;
+			read-only;
 		};
-		code_partition: partition@26000 {
+
+		code_partition: partition@10000 {
 			label = "code_partition";
-			reg = <0x00026000 0x000c6000>;
+			reg = <0x00010000 0x00070000>;
 		};
 
-		/*
-		 * The flash starting at 0x000ec000 and ending at
-		 * 0x000f3fff is reserved for use by the application.
-		 */
-
-		/*
-		 * Storage partition will be used by FCB/LittleFS/NVS
-		 * if enabled.
-		 */
-		storage_partition: partition@ec000 {
+		storage_partition: partition@80000 {
 			label = "storage";
-			reg = <0x000ec000 0x00008000>;
-		};
-
-		boot_partition: partition@f4000 {
-			label = "adafruit_boot";
-			reg = <0x000f4000 0x0000c000>;
+			reg = <0x00080000 0x00010000>;
 		};
 	};
 };
 
-
-&pinctrl {
-    spi3_default: spi3_default {
-        group1 {
-            psels = <NRF_PSEL(SPIM_MOSI, 0, 13)>;
-        };
-    };
-
-    spi3_sleep: spi3_sleep {
-        group1 {
-            psels = <NRF_PSEL(SPIM_MOSI, 0, 13)>;
-            low-power-enable;
-        };
-    };
-};
-
-&spi3 {
-  compatible = "nordic,nrf-spim";
-  status = "okay";
-
-  pinctrl-0 = <&spi3_default>;
-  pinctrl-1 = <&spi3_sleep>;
-  pinctrl-names = "default", "sleep";
-
-  led_strip: ws2812@0 {
-    compatible = "worldsemi,ws2812-spi";
-
-    /* SPI */
-    reg = <0>; /* ignored, but necessary for SPI bindings */
-    spi-max-frequency = <4000000>;
-
-    /* WS2812 */
-    chain-length = <68>; /* number of LEDs */
-    spi-one-frame = <0x70>;
-    spi-zero-frame = <0x40>;
-    color-mapping = <LED_COLOR_ID_GREEN
-                          LED_COLOR_ID_RED
-                          LED_COLOR_ID_BLUE>;
-  };
+&usb {
+	status = "okay";
+	pinctrl-0 = <&usb_dm_pa11 &usb_dp_pa12>;
+	pinctrl-names = "default";
 };
 
 / {
     chosen {
         zmk,underglow = &led_strip;
-    };
-};
-
-/ {
-    leds {
-        compatible = "gpio-leds";
-        blue_led: blue_led {
-			gpios = <&gpio1 2 GPIO_ACTIVE_HIGH>;
-			label = "Blue LED";
-		};
-    };
-};
-
-// todo: fix - bandaid
-/ {
-    aliases {
-        blue-led = &blue_led;
-    };
-};
-
-/ {
-    led_power: led_power {
-        compatible = "gpio-leds";
-        led_power_gate: led_power_gate {
-            gpios = <&gpio1 10 GPIO_ACTIVE_HIGH>;
-            label = "LED Power Gate";
-        };
-    };
-
-    aliases {
-        led-power = &led_power_gate;
     };
 };
