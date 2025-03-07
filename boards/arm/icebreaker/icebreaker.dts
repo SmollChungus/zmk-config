@@ -220,8 +220,23 @@ zephyr_udc0: &usbd {
     };
 };
 
+// todo: fix - bandaid
 / {
     aliases {
         blue-led = &blue_led;
+    };
+};
+
+/ {
+    led_power: led_power {
+        compatible = "gpio-leds";
+        led_power_gate: led_power_gate {
+            gpios = <&gpio1 10 GPIO_ACTIVE_HIGH>;
+            label = "LED Power Gate";
+        };
+    };
+
+    aliases {
+        led-power = &led_power_gate;
     };
 };
