@@ -367,62 +367,92 @@ static int hall_effect_load_calibration(void) {
     return 0;
 }
 
+/* Add this function to your hall_effect.c file for debugging */
+static void debug_adc_devices(void) {
+    // List of possible ADC device paths to check
+    const char* adc_paths[] = {
+        "ADC_1",
+        "ADC1",
+        "adc@0",
+        "adc@40012000",
+        "adc1@40012000",
+        "ST_STM32_ADC_1",
+        "adc"
+    };
+    
+    printk("HALL EFFECT DEBUG: Checking for available ADC devices\n");
+    
+    for (int i = 0; i < sizeof(adc_paths)/sizeof(char*); i++) {
+        const struct device *dev = device_get_binding(adc_paths[i]);
+        printk("HALL EFFECT DEBUG: Checking %s: %s\n", 
+               adc_paths[i], 
+               dev ? "FOUND" : "NOT FOUND");
+    }
+}
+
 /* Initialize hall effect driver */
 int hall_effect_init(const struct device *dev) {
-    int ret;
-    
-    printk("HALL EFFECT: Initializing hall effect driver\n");
-    LOG_INF("HALL EFFECT: Initializing hall effect driver");
+    int err;
+    k_sleep(K_MSEC(1000));
 
-    /* Initialize ADC */
+    LOG_INF("HALL EFFECT: Initializing hall effect driver");
+    printk("HALL EFFECT: Initializing hall effect driver\n");
+
+    // Add a small delay to ensure ADC subsystem is ready
+    k_sleep(K_MSEC(100));
+
+    // Get the ADC device
     adc_dev = DEVICE_DT_GET(DT_NODELABEL(adc1));
     if (!device_is_ready(adc_dev)) {
-        printk("HALL EFFECT: ADC device not ready\n");
         LOG_ERR("ADC device not ready");
+        printk("HALL EFFECT: ADC device not ready\n");
+        
+        // Print more detailed error information
+        printk("HALL EFFECT: ADC device pointer: %p\n", adc_dev);
+        printk("HALL EFFECT: ADC device name: %s\n", adc_dev ? adc_dev->name : "NULL");
+        
         return -ENODEV;
     }
-    printk("HALL EFFECT: ADC device ready\n");
-    LOG_INF("ADC device ready");
+
+    printk("HALL EFFECT: ADC device is ready\n");
     
-    /* Configure ADC */
+    // Set up ADC channel configuration with explicit error checking
     struct adc_channel_cfg channel_cfg = {
         .gain = ADC_GAIN_1,
         .reference = ADC_REF_INTERNAL,
         .acquisition_time = ADC_ACQ_TIME_DEFAULT,
-        .channel_id = 3,
+        .channel_id = 3, // Use channel 3 (ADC1_IN3)
         .differential = 0
     };
     
-    ret = adc_channel_setup(adc_dev, &channel_cfg);
-    if (ret != 0) {
-        printk("HALL EFFECT: Failed to setup ADC channel: %d\n", ret);
-        LOG_ERR("Failed to setup ADC channel: %d", ret);
-        return ret;
+    err = adc_channel_setup(adc_dev, &channel_cfg);
+    if (err != 0) {
+        LOG_ERR("Failed to setup ADC channel: %d", err);
+        printk("HALL EFFECT: Failed to setup ADC channel: %d\n", err);
+        return err;
     }
+
     printk("HALL EFFECT: ADC channel setup complete\n");
-    LOG_INF("ADC channel setup complete");
-    
-    /* Configure ADC sequence */
-    adc_sequence = (struct adc_sequence) {
-        .channels = BIT(3),
-        .buffer = &adc_raw_value,
-        .buffer_size = sizeof(adc_raw_value),
-        .resolution = 12,
-        .oversampling = 0,
-        .calibrate = false
-    };
-    
-    /* Initialize multiplexers */
-    ret = mux_init();
-    if (ret != 0) {
-        printk("HALL EFFECT: Failed to initialize multiplexers: %d\n", ret);
-        LOG_ERR("Failed to initialize multiplexers: %d", ret);
-        return ret;
+
+    // Set up ADC sequence with explicit buffer
+    adc_sequence.channels = BIT(3); // Channel 3
+    adc_sequence.buffer = &adc_raw_value;
+    adc_sequence.buffer_size = sizeof(adc_raw_value);
+    adc_sequence.resolution = 12;
+    adc_sequence.oversampling = 0;
+    adc_sequence.calibrate = false;
+
+    printk("HALL EFFECT: ADC sequence configuration complete\n");
+
+    // Initialize multiplexers
+    err = mux_init();
+    if (err != 0) {
+        LOG_ERR("Failed to initialize multiplexers: %d", err);
+        printk("HALL EFFECT: Failed to initialize multiplexers: %d\n", err);
+        return err;
     }
-    printk("HALL EFFECT: Multiplexers initialized\n");
-    LOG_INF("Multiplexers initialized");
-    
-    /* Initialize key configurations with default values */
+
+    // Initialize key configurations with default values
     for (int i = 0; i < SENSOR_COUNT; i++) {
         he_key_configs[i].noise_floor = 0;
         he_key_configs[i].noise_ceiling = EXPECTED_NOISE_CEILING;
@@ -434,18 +464,20 @@ int hall_effect_init(const struct device *dev) {
         he_key_rapid_trigger_configs[i].engage_distance = DEFAULT_RELEASE_DISTANCE_RT;
         he_key_rapid_trigger_configs[i].disengage_distance = DEFAULT_RELEASE_DISTANCE_RT;
     }
-    printk("HALL EFFECT: Key configurations initialized with default values\n");
-    LOG_INF("Key configurations initialized with default values");
-    
-    /* Load calibration data from settings */
+
+    // Load calibration data from settings
     settings_subsys_init();
     settings_load();
-    printk("HALL EFFECT: Settings loaded\n");
-    LOG_INF("Settings loaded");
-    
-    /* If this is the first boot after flashing, calibrate the sensors */
+
+    // Set post-flash flag to true on first boot
+    if (!he_config.post_flash_flag) {
+        LOG_INF("Setting post-flash flag for first-time calibration");
+        he_config.post_flash_flag = true;
+        settings_save_one("hall_effect/config", &he_config, sizeof(he_config));
+    }
+
+    // If this is the first boot after flashing, calibrate the sensors
     if (he_config.post_flash_flag) {
-        printk("HALL EFFECT: Post-flash flag set, calibrating sensors\n");
         LOG_INF("Post-flash flag set, calibrating sensors");
         hall_effect_calibrate_noise_floor();
         hall_effect_calibrate_noise_ceiling();
@@ -453,8 +485,8 @@ int hall_effect_init(const struct device *dev) {
         settings_save_one("hall_effect/config", &he_config, sizeof(he_config));
     }
 
-    printk("HALL EFFECT: Hall effect driver initialized successfully\n");
     LOG_INF("Hall effect driver initialized successfully");
+    printk("HALL EFFECT: Hall effect driver initialized successfully\n");
     return 0;
 }
 
@@ -462,7 +494,6 @@ int hall_effect_init(const struct device *dev) {
 bool hall_effect_matrix_scan(const struct device *dev) {
     bool matrix_changed = false;
     
-    printk("HALL EFFECT: Starting hall effect matrix scan\n");
     LOG_INF("Starting hall effect matrix scan");
     
     for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
@@ -475,14 +506,11 @@ bool hall_effect_matrix_scan(const struct device *dev) {
             continue;
         }
         
-        printk("HALL EFFECT: Scanning sensor %d (row %d, col %d)\n", sensor_id, row, col);
         LOG_INF("Scanning sensor %d (row %d, col %d)", sensor_id, row, col);
         
         uint16_t sensor_value = hall_effect_read_raw(sensor_id);
         uint8_t scaled_value = rescale(sensor_value, sensor_id);
         
-        printk("HALL EFFECT: Sensor %d (row %d, col %d): raw=%d, scaled=%d\n", 
-               sensor_id, row, col, sensor_value, scaled_value);
         LOG_INF("Sensor %d (row %d, col %d): raw=%d, scaled=%d", 
                sensor_id, row, col, sensor_value, scaled_value);
         
@@ -490,26 +518,22 @@ bool hall_effect_matrix_scan(const struct device *dev) {
         bool changed = false;
         switch (he_config.actuation_mode) {
             case ACTUATION_MODE_RAPID_TRIGGER:
-                printk("HALL EFFECT: Using rapid trigger mode for sensor %d\n", sensor_id);
                 LOG_INF("Using rapid trigger mode for sensor %d", sensor_id);
                 changed = update_key_rapid_trigger(row, col, sensor_id, sensor_value);
                 break;
             case ACTUATION_MODE_NORMAL:
             default:
-                printk("HALL EFFECT: Using normal mode for sensor %d\n", sensor_id);
                 LOG_INF("Using normal mode for sensor %d", sensor_id);
                 changed = update_key_normal(row, col, sensor_id, sensor_value);
                 break;
         }
         
         if (changed) {
-            printk("HALL EFFECT: Key state changed at row %d, col %d\n", row, col);
             LOG_INF("Key state changed at row %d, col %d", row, col);
             matrix_changed = true;
         }
     }
     
-    printk("HALL EFFECT: Matrix scan complete, changed: %d\n", matrix_changed);
     LOG_INF("Matrix scan complete, changed: %d", matrix_changed);
     return matrix_changed;
 } 

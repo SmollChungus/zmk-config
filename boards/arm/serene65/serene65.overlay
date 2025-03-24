@@ -35,6 +35,20 @@
     pinctrl-0 = <&adc1_in3_pa3>;
     pinctrl-names = "default";
     st,adc-prescaler = <2>;
+    #address-cells = <1>;
+    #size-cells = <0>;
+    
+    /* Make certain ADC is configured for STM32 */
+    compatible = "st,stm32-adc";
+    
+    /* Add this to explicitly set up the channel */
+    channel@3 {
+        reg = <3>;
+        zephyr,gain = "ADC_GAIN_1";
+        zephyr,reference = "ADC_REF_INTERNAL";
+        zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+        zephyr,resolution = <12>;
+    };
 };
 
 &spi2 {
