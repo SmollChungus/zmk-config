@@ -1,0 +1,24 @@
+description: ZMK Hall Effect Matrix driver
+
+compatible: "zmk,matrix-hall-effect"
+
+include: kscan.yaml
+
+properties:
+  status:
+    type: string
+    enum:
+      - "okay"
+      - "disabled"
+    description: Whether the driver is enabled or disabled.
+  
+  label:
+    type: string
+    description: Human readable string describing the device.
+    
+  diode-direction:
+    type: string
+    enum:
+      - "row2col"
+      - "col2row"
+    description: Diode direction. 

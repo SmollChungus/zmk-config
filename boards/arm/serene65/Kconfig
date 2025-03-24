@@ -1,0 +1,47 @@
+# Serene65 board configuration
+
+# Copyright (c) 2025 Matthijs Muller
+# SPDX-License-Identifier: MIT
+
+# Matrix driver configuration options
+config ZMK_KSCAN_MATRIX_DRIVER
+	bool "Enable matrix driver for hall effect sensors"
+	default y
+	help
+	  This option enables the matrix driver for hall effect sensors.
+
+# Hall effect driver configuration options
+
+config ZMK_HALL_EFFECT
+	bool "ZMK Hall Effect Support"
+	depends on ZMK_KSCAN_MATRIX_DRIVER
+	default n
+	help
+	  This option enables hall effect support for ZMK.
+
+config ZMK_HALL_EFFECT_CALIBRATION
+	bool "ZMK Hall Effect Calibration Support"
+	depends on ZMK_HALL_EFFECT
+	default n
+	help
+	  This option enables calibration support for hall effect sensors.
+
+config ZMK_HALL_EFFECT_RAPID_TRIGGER
+	bool "ZMK Hall Effect Rapid Trigger Support"
+	depends on ZMK_HALL_EFFECT
+	default n
+	help
+	  This option enables rapid trigger support for hall effect sensors.
+
+if BOARD_SERENE65
+menu "Hall Effect Configuration"
+
+config HALL_EFFECT_LOG_LEVEL
+	int "Hall Effect Log Level"
+	default 4
+	range 0 4
+	help
+	  0=OFF, 1=ERROR, 2=WARN, 3=INFO, 4=DEBUG
+
+endmenu
+endif 

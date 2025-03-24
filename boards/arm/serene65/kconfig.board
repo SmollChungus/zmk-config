@@ -1,0 +1,8 @@
+# Serene65 board configuration
+
+# Copyright (c) 2025 Matthijs Muller
+# SPDX-License-Identifier: MIT
+
+config BOARD_SERENE65
+    bool "Serene65"
+	depends on SOC_STM32F411XE

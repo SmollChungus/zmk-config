@@ -1,0 +1,23 @@
+# Hall effect driver configuration options
+
+config ZMK_HALL_EFFECT
+	bool "Hall effect sensor support"
+	default y
+	depends on ADC
+	depends on SETTINGS
+	help
+	  This option enables the hall effect sensor driver for ZMK.
+
+config ZMK_HALL_EFFECT_CALIBRATION
+	bool "Hall effect sensor calibration"
+	default y
+	depends on ZMK_HALL_EFFECT
+	help
+	  This option enables calibration for hall effect sensors.
+
+config ZMK_HALL_EFFECT_RAPID_TRIGGER
+	bool "Hall effect rapid trigger mode"
+	default y
+	depends on ZMK_HALL_EFFECT
+	help
+	  This option enables rapid trigger mode for hall effect sensors. 

@@ -1,0 +1,14 @@
+identifier: serene65
+name: serene65 rev_1
+type: mcu
+arch: arm
+toolchain:
+  - zephyr
+  - gnuarmemb
+  - xtools
+ram: 40
+supported:
+  - encoders
+  - switches
+  - underglow
+  - per_key

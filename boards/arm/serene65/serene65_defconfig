@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: MIT
+
+# Board configuration
+CONFIG_BOARD_SERENE65=y
+
+# SOC configuration
+
+CONFIG_SOC_SERIES_STM32F4X=y
+CONFIG_SOC_STM32F411XE=y
+
+# 72MHz system clock
+CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC=72000000
+
+# enable GPIO
+CONFIG_GPIO=y
+
+# Enable pinctrl
+CONFIG_PINCTRL=y
+
+# Enable ADC
+CONFIG_ADC=y
+
+# Enable settings
+CONFIG_SETTINGS=y
+CONFIG_SETTINGS_RUNTIME=y
+
+# Enable hall effect driver
+CONFIG_ZMK_HALL_EFFECT=y
+CONFIG_ZMK_HALL_EFFECT_CALIBRATION=y
+CONFIG_ZMK_HALL_EFFECT_RAPID_TRIGGER=y
+
+# Enable matrix driver
+CONFIG_ZMK_KSCAN_MATRIX_DRIVER=y
+
+CONFIG_ISR_STACK_SIZE=1024
+
+# clock configuration
+CONFIG_CLOCK_CONTROL=y
+
+CONFIG_ZMK_USB=y
+
+# Disable external power control for RGB underglow
+CONFIG_ZMK_RGB_UNDERGLOW_EXT_POWER=n

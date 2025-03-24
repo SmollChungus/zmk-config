@@ -1,0 +1,11 @@
+file_format: "1"
+id: serene65_rev_1
+name: Serene65 rev_1
+type: board
+arch: arm
+features:
+  - keys
+  - encoder
+outputs:
+  - usb
+url: https://serene.industries

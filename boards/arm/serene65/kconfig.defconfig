@@ -1,0 +1,77 @@
+# Serene65 board configuration
+
+# Copyright (c) 2025 Matthijs Muller
+# SPDX-License-Identifier: MIT
+
+if BOARD_SERENE65
+
+config BOARD
+    default "serene65"
+
+config ZMK_KEYBOARD_NAME
+    default "Serene65"
+
+config ZMK_RGB_UNDERGLOW
+    select SPI
+    select WS2812_STRIP
+
+config ZMK_USB
+    default y
+
+# Enable hall effect matrix driver
+config ZMK_KSCAN_MATRIX_DRIVER
+    default y
+
+# Enable hall effect sensor support
+config ZMK_HALL_EFFECT
+    default y
+    depends on ZMK_KSCAN_MATRIX_DRIVER
+
+# Enable hall effect sensor calibration
+config ZMK_HALL_EFFECT_CALIBRATION
+    default y
+    depends on ZMK_HALL_EFFECT
+
+# Enable hall effect rapid trigger mode
+config ZMK_HALL_EFFECT_RAPID_TRIGGER
+    default y
+    depends on ZMK_HALL_EFFECT
+
+# Enable ADC for hall effect sensors
+config ADC
+    default y
+
+# Enable settings for calibration storage
+config SETTINGS
+    default y
+
+config SETTINGS_RUNTIME
+    default y
+
+if USB
+
+config USB_DEVICE_STACK
+    default y
+
+config USB_DEVICE_MANUFACTURER
+    default "ZMK Project"
+
+config USB_DEVICE_PRODUCT
+    default "Serene65"
+
+config USB_DEVICE_VID
+    default 0x1D50
+
+config USB_DEVICE_PID
+    default 0x615E
+
+endif # USB
+
+if ZMK_RGB_UNDERGLOW
+
+config WS2812_STRIP
+    default y
+
+endif # ZMK_RGB_UNDERGLOW
+
+endif # BOARD_SERENE65

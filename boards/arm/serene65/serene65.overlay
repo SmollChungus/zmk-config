@@ -1,0 +1,55 @@
+/*
+ * Copyright (c) 2025 Matthijs Muller
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
+/ {
+    chosen {
+        zmk,kscan = &kscan_hall_effect;
+        zephyr,console = &cdc_acm_uart0;
+    };
+
+    kscan_hall_effect: kscan_hall_effect {
+        compatible = "zmk,matrix-hall-effect";
+        label = "KSCAN_HALL_EFFECT";
+        status = "okay";
+        
+        diode-direction = "col2row";
+    };
+};
+
+&gpioa {
+    status = "okay";
+};
+
+&gpiob {
+    status = "okay";
+};
+
+&gpioc {
+    status = "okay";
+};
+
+&adc1 {
+    status = "okay";
+    pinctrl-0 = <&adc1_in3_pa3>;
+    pinctrl-names = "default";
+    st,adc-prescaler = <2>;
+};
+
+&spi2 {
+    status = "okay";
+    pinctrl-0 = <&spi2_sck_pb13 &spi2_mosi_pb15>;
+    pinctrl-names = "default";
+};
+
+&zephyr_udc0 {
+    status = "okay";
+    
+    cdc_acm_uart0: cdc_acm_uart0 {
+        compatible = "zephyr,cdc-acm-uart";
+        label = "CDC_ACM_0";
+        status = "okay";
+    };
+}; 

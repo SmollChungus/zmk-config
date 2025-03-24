@@ -1,1 +1,1 @@
-target_sources(app PRIVATE led_power.c)
+# Empty CMakeLists.txt

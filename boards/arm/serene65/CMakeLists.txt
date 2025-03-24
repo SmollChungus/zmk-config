@@ -1,0 +1,1 @@
+target_sources(app PRIVATE src/hall_effect.c src/matrix_hall_effect.c)
