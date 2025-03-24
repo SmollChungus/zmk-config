@@ -1,0 +1,13 @@
+# Copyright (c) 2025 Matthijs Muller
+# SPDX-License-Identifier: MIT
+
+description: ZMK KSCAN Handler
+
+compatible: "zmk,kscan"
+
+include: kscan.yaml
+
+properties:
+  label:
+    type: string
+    description: Human readable string describing the device. 

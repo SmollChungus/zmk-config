@@ -1,8 +1,11 @@
+# Copyright (c) 2025 Matthijs Muller
+# SPDX-License-Identifier: MIT
+
 description: ZMK Hall Effect Matrix driver
 
 compatible: "zmk,matrix-hall-effect"
 
-include: kscan.yaml
+include: base.yaml
 
 properties:
   status:

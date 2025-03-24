@@ -11,6 +11,8 @@
 #include <zephyr/settings/settings.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/devicetree.h>
+#include <zephyr/drivers/kscan.h>
+#include <zephyr/input/input.h>
 
 #include <zmk/matrix.h>
 #include <zmk/keymap.h>
@@ -68,6 +70,12 @@ static const sensor_to_matrix_map_t sensor_to_matrix_map[SENSOR_COUNT] = {
     {4,0,59,0,11},{4,1,60,0,12},{4,2,61,1,9}, {4,6,62,1,13},{4,10,63,3,11},{4,11,64,3,12},{4,12,65,4,9}, {4,13,66,4,11},{4,14,67,4,12},{4,9,68,0,0}
 };
 
+/* Add at the top with other global variables */
+bool matrix_state[MATRIX_ROWS][MATRIX_COLS] = {0};
+
+/* Add at the top of the file, with other global variables */
+static kscan_callback_t hall_effect_callback;
+
 /* Initialize multiplexers */
 static int mux_init(void) {
     int ret;
@@ -117,28 +125,24 @@ static void select_mux(uint8_t sensor_id) {
     uint8_t mux_id = sensor_to_matrix_map[sensor_id].mux_id;
     uint8_t mux_channel = sensor_to_matrix_map[sensor_id].mux_channel;
     
-    printk("HALL EFFECT: select_mux: Selecting mux %d, channel %d for sensor %d\n", mux_id, mux_channel, sensor_id);
-    LOG_INF("select_mux: Selecting mux %d, channel %d for sensor %d", mux_id, mux_channel, sensor_id);
+    LOG_DBG("select_mux: Selecting mux %d, channel %d for sensor %d", mux_id, mux_channel, sensor_id);
 
     /* Disable all multiplexers first */
     for (int i = 0; i < MUX_COUNT; i++) {
         gpio_pin_set(mux_en_pins[i].port, mux_en_pins[i].pin, 1);
     }
-    printk("HALL EFFECT: select_mux: All multiplexers disabled\n");
-    LOG_INF("select_mux: All multiplexers disabled");
+    LOG_DBG("select_mux: All multiplexers disabled");
     
     /* Set multiplexer channel */
     for (int i = 0; i < MUX_SEL_PIN_COUNT; i++) {
         gpio_pin_set(mux_sel_pins[i].port, mux_sel_pins[i].pin, 
                    (mux_channel >> i) & 0x01);
     }
-    printk("HALL EFFECT: select_mux: Channel select pins set\n");
-    LOG_INF("select_mux: Channel select pins set");
+    LOG_DBG("select_mux: Channel select pins set");
     
     /* Enable the selected multiplexer */
     gpio_pin_set(mux_en_pins[mux_id].port, mux_en_pins[mux_id].pin, 0);
-    printk("HALL EFFECT: select_mux: Multiplexer %d enabled\n", mux_id);
-    LOG_INF("select_mux: Multiplexer %d enabled", mux_id);
+    LOG_DBG("select_mux: Multiplexer %d enabled", mux_id);
 
     /* Small delay to allow the multiplexer to settle */
     k_busy_wait(5);
@@ -148,12 +152,10 @@ static void select_mux(uint8_t sensor_id) {
 uint16_t hall_effect_read_raw(uint8_t sensor_id) {
     int ret;
     
-    printk("HALL EFFECT: hall_effect_read_raw: Reading sensor %d\n", sensor_id);
-    LOG_INF("hall_effect_read_raw: Reading sensor %d", sensor_id);
+    LOG_DBG("hall_effect_read_raw: Reading sensor %d", sensor_id);
     select_mux(sensor_id);
 
-    printk("HALL EFFECT: hall_effect_read_raw: Starting ADC read for sensor %d\n", sensor_id);
-    LOG_INF("hall_effect_read_raw: Starting ADC read for sensor %d", sensor_id);
+    LOG_DBG("hall_effect_read_raw: Starting ADC read for sensor %d", sensor_id);
     ret = adc_read(adc_dev, &adc_sequence);
     if (ret != 0) {
         printk("HALL EFFECT: hall_effect_read_raw: Failed to read ADC for sensor %d: %d\n", sensor_id, ret);
@@ -161,23 +163,32 @@ uint16_t hall_effect_read_raw(uint8_t sensor_id) {
         return 0;
     }
     
-    printk("HALL EFFECT: hall_effect_read_raw: Sensor %d raw value: %d\n", sensor_id, adc_raw_value);
-    LOG_INF("hall_effect_read_raw: Sensor %d raw value: %d", sensor_id, adc_raw_value);
+    LOG_DBG("hall_effect_read_raw: Sensor %d raw value: %d", sensor_id, adc_raw_value);
     return adc_raw_value;
 }
 
-/* Rescale sensor value to 0-100 range */
+/* Modify the rescale function to better handle your sensor values */
 static uint8_t rescale(uint16_t sensor_value, uint8_t sensor_id) {
-    uint16_t noise_floor = he_key_configs[sensor_id].noise_floor;
-    uint16_t noise_ceiling = he_key_configs[sensor_id].noise_ceiling;
-
-    if (noise_ceiling > noise_floor) {
-        if (sensor_value <= noise_floor) return 0;
-        if (sensor_value >= noise_ceiling) return 100;
-        return (uint8_t)(((uint32_t)(sensor_value - noise_floor) * 100) / 
-                        (noise_ceiling - noise_floor));
+    // The resting value for most sensors is around 2020-2050
+    // Most false presses show values around 2070-2100
+    uint16_t noise_floor = 2050;    // Base value when key is not pressed
+    uint16_t noise_ceiling = 3000;  // Maximum expected when fully pressed
+    
+    // Use the configured values if they're sensible
+    if (he_key_configs[sensor_id].noise_ceiling > he_key_configs[sensor_id].noise_floor) {
+        noise_floor = he_key_configs[sensor_id].noise_floor;
+        noise_ceiling = he_key_configs[sensor_id].noise_ceiling;
     }
-    return 0;
+
+    // If the value is below or very close to the noise floor, return 0
+    if (sensor_value <= noise_floor + 20) return 0;
+    
+    // If the value is above noise ceiling, return 100
+    if (sensor_value >= noise_ceiling) return 100;
+    
+    // Otherwise, scale to 0-100 range
+    return (uint8_t)(((uint32_t)(sensor_value - noise_floor - 20) * 100) / 
+                    (noise_ceiling - noise_floor - 20));
 }
 
 /* Update key state using normal actuation mode */
@@ -271,8 +282,6 @@ static bool update_key_rapid_trigger(uint8_t row, uint8_t col, uint8_t sensor_id
 
 /* Calibrate noise floor (minimum sensor values) */
 void hall_effect_calibrate_noise_floor(void) {
-    uint16_t samples[NOISE_FLOOR_SAMPLE_COUNT];
-    
     for (uint8_t sensor_id = 0; sensor_id < SENSOR_COUNT; sensor_id++) {
         uint16_t min_value = UINT16_MAX;
         
@@ -292,8 +301,6 @@ void hall_effect_calibrate_noise_floor(void) {
 
 /* Calibrate noise ceiling (maximum sensor values) */
 void hall_effect_calibrate_noise_ceiling(void) {
-    uint16_t samples[NOISE_CEILING_SAMPLE_COUNT];
-    
     for (uint8_t sensor_id = 0; sensor_id < SENSOR_COUNT; sensor_id++) {
         uint16_t max_value = 0;
         
@@ -454,15 +461,15 @@ int hall_effect_init(const struct device *dev) {
 
     // Initialize key configurations with default values
     for (int i = 0; i < SENSOR_COUNT; i++) {
-        he_key_configs[i].noise_floor = 0;
-        he_key_configs[i].noise_ceiling = EXPECTED_NOISE_CEILING;
-        he_key_configs[i].actuation_threshold = DEFAULT_ACTUATION_LEVEL;
-        he_key_configs[i].release_threshold = DEFAULT_RELEASE_LEVEL;
+        he_key_configs[i].noise_floor = 2050;     // Resting value
+        he_key_configs[i].noise_ceiling = 3000;   // Fully pressed value
+        he_key_configs[i].actuation_threshold = 80; // 80% to actuate (high to prevent false triggers)
+        he_key_configs[i].release_threshold = 60;   // 60% to release (provides hysteresis)
         
-        he_key_rapid_trigger_configs[i].deadzone = DEFAULT_DEADZONE_RT;
-        he_key_rapid_trigger_configs[i].rt_actuation_point = 50;
-        he_key_rapid_trigger_configs[i].engage_distance = DEFAULT_RELEASE_DISTANCE_RT;
-        he_key_rapid_trigger_configs[i].disengage_distance = DEFAULT_RELEASE_DISTANCE_RT;
+        he_key_rapid_trigger_configs[i].deadzone = 30; // 30% deadzone - increase to avoid accidental triggers
+        he_key_rapid_trigger_configs[i].rt_actuation_point = 80; // 80% actuation - higher threshold
+        he_key_rapid_trigger_configs[i].engage_distance = 10;    // 10% engage distance
+        he_key_rapid_trigger_configs[i].disengage_distance = 10; // 10% disengage distance
     }
 
     // Load calibration data from settings
@@ -485,55 +492,197 @@ int hall_effect_init(const struct device *dev) {
         settings_save_one("hall_effect/config", &he_config, sizeof(he_config));
     }
 
+    // Add threshold debugging at the end of initialization
+    hall_effect_debug_thresholds();
+
+    // Add this at the end of the function
+    printk("HALL EFFECT: Sampling all sensors to determine thresholds\n");
+    hall_effect_sample_all_values();
+    
     LOG_INF("Hall effect driver initialized successfully");
     printk("HALL EFFECT: Hall effect driver initialized successfully\n");
     return 0;
 }
 
-/* Scan the matrix and update key states */
+/* Update the matrix scan function to use the callback */
 bool hall_effect_matrix_scan(const struct device *dev) {
     bool matrix_changed = false;
+    static uint32_t scan_count = 0;
     
-    LOG_INF("Starting hall effect matrix scan");
+    // Get the callback pointer
+    kscan_callback_t *callback_ptr = get_hall_effect_callback_ptr();
     
+    // Log scan count occasionally for debugging
+    if (scan_count++ % 100 == 0) {
+        printk("HALL EFFECT: Matrix scan %u\n", scan_count);
+    }
+    
+    // Scan each sensor
     for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
         uint8_t row = sensor_to_matrix_map[i].row;
         uint8_t col = sensor_to_matrix_map[i].col;
-        uint8_t sensor_id = sensor_to_matrix_map[i].sensor_id;
         
-        /* Skip the encoder sensor (last one) */
-        if (sensor_id == 68) {
+        // Skip sensors outside the valid matrix range
+        if (row >= MATRIX_ROWS || col >= MATRIX_COLS) {
             continue;
         }
         
-        LOG_INF("Scanning sensor %d (row %d, col %d)", sensor_id, row, col);
+        // Read the sensor value
+        uint16_t raw_value = hall_effect_read_raw(i);
+        uint8_t scaled_value = rescale(raw_value, i);
         
-        uint16_t sensor_value = hall_effect_read_raw(sensor_id);
-        uint8_t scaled_value = rescale(sensor_value, sensor_id);
+        // Determine the new state
+        bool was_pressed = matrix_state[row][col];
+        bool is_pressed = scaled_value >= he_key_configs[i].actuation_threshold;
         
-        LOG_INF("Sensor %d (row %d, col %d): raw=%d, scaled=%d", 
-               sensor_id, row, col, sensor_value, scaled_value);
-        
-        /* Update key state based on actuation mode */
-        bool changed = false;
-        switch (he_config.actuation_mode) {
-            case ACTUATION_MODE_RAPID_TRIGGER:
-                LOG_INF("Using rapid trigger mode for sensor %d", sensor_id);
-                changed = update_key_rapid_trigger(row, col, sensor_id, sensor_value);
-                break;
-            case ACTUATION_MODE_NORMAL:
-            default:
-                LOG_INF("Using normal mode for sensor %d", sensor_id);
-                changed = update_key_normal(row, col, sensor_id, sensor_value);
-                break;
-        }
-        
-        if (changed) {
-            LOG_INF("Key state changed at row %d, col %d", row, col);
+        // If the state changed, update and report it
+        if (is_pressed != was_pressed) {
+            matrix_state[row][col] = is_pressed;
+            
+            // Debug output
+            printk("KEY CHANGE: row %d, col %d, sensor %d, value %d, scaled %d, is_pressed: %s\n",
+                   row, col, i, raw_value, scaled_value,
+                   is_pressed ? "TRUE" : "FALSE");
+            
+            // Notify ZMK of the key state change using the registered callback
+            if (callback_ptr && *callback_ptr) {
+                (*callback_ptr)(dev, row, col, is_pressed);
+                printk("HALL EFFECT: Called callback for key change\n");
+            } else {
+                printk("HALL EFFECT: Warning - callback not registered!\n");
+            }
+            
             matrix_changed = true;
         }
     }
     
-    LOG_INF("Matrix scan complete, changed: %d", matrix_changed);
     return matrix_changed;
+}
+
+bool hall_effect_is_pressed(int sensor) {
+    int32_t value = hall_effect_get_value(sensor);
+    bool pressed = false;
+    
+    if (value < 0) {
+        // Error reading value
+        LOG_ERR("Error reading hall effect value for sensor %d: %d", sensor, value);
+        printk("HALL EFFECT: Error reading value for sensor %d: %d\n", sensor, value);
+        return false;
+    }
+    
+    if (IS_ENABLED(CONFIG_ZMK_HALL_EFFECT_RAPID_TRIGGER)) {
+        // Rapid trigger mode
+        if (he_key_states[sensor].pressed) {
+            // Key is already pressed, check for release
+            if (value <= he_key_configs[sensor].release_threshold) {
+                he_key_states[sensor].pressed = false;
+                pressed = false;
+                LOG_DBG("Sensor %d RELEASED (RT): value %d <= threshold %d", 
+                       sensor, value, he_key_configs[sensor].release_threshold);
+                printk("HALL EFFECT: Sensor %d RELEASED (RT): %d <= %d\n", 
+                       sensor, value, he_key_configs[sensor].release_threshold);
+            } else {
+                pressed = true;
+            }
+        } else {
+            // Key is released, check for press
+            if (value >= he_key_configs[sensor].actuation_threshold) {
+                he_key_states[sensor].pressed = true;
+                pressed = true;
+                LOG_DBG("Sensor %d PRESSED (RT): value %d >= threshold %d", 
+                       sensor, value, he_key_configs[sensor].actuation_threshold);
+                printk("HALL EFFECT: Sensor %d PRESSED (RT): %d >= %d\n", 
+                       sensor, value, he_key_configs[sensor].actuation_threshold);
+            } else {
+                pressed = false;
+            }
+        }
+    } else {
+        // Standard mode
+        if (he_key_states[sensor].pressed) {
+            // Key is already pressed, check for release
+            if (value <= he_key_configs[sensor].release_threshold) {
+                he_key_states[sensor].pressed = false;
+                pressed = false;
+                LOG_DBG("Sensor %d RELEASED: value %d <= threshold %d", 
+                       sensor, value, he_key_configs[sensor].release_threshold);
+                printk("HALL EFFECT: Sensor %d RELEASED: %d <= %d\n", 
+                       sensor, value, he_key_configs[sensor].release_threshold);
+            } else {
+                pressed = true;
+            }
+        } else {
+            // Key is released, check for press
+            if (value >= he_key_configs[sensor].actuation_threshold) {
+                he_key_states[sensor].pressed = true;
+                pressed = true;
+                LOG_DBG("Sensor %d PRESSED: value %d >= threshold %d", 
+                       sensor, value, he_key_configs[sensor].actuation_threshold);
+                printk("HALL EFFECT: Sensor %d PRESSED: %d >= %d\n", 
+                       sensor, value, he_key_configs[sensor].actuation_threshold);
+            } else {
+                pressed = false;
+            }
+        }
+    }
+    
+    return pressed;
+}
+
+// Add this new debugging function to check all thresholds
+void hall_effect_debug_thresholds(void) {
+    printk("HALL EFFECT DEBUG: Checking all key thresholds\n");
+    
+    for (int i = 0; i < SENSOR_COUNT; i++) {
+        printk("HALL EFFECT DEBUG: Sensor %d - noise_floor: %d, noise_ceiling: %d, actuation: %d, release: %d\n",
+               i,
+               he_key_configs[i].noise_floor,
+               he_key_configs[i].noise_ceiling,
+               he_key_configs[i].actuation_threshold,
+               he_key_configs[i].release_threshold);
+    }
+}
+
+// Add near the top with other global variables
+he_key_state_t he_key_states[SENSOR_COUNT] = {0};
+
+// Add this missing function implementation
+int32_t hall_effect_get_value(int sensor) {
+    if (sensor < 0 || sensor >= SENSOR_COUNT) {
+        LOG_ERR("Invalid sensor ID: %d", sensor);
+        return -EINVAL;
+    }
+    
+    uint16_t raw_value = hall_effect_read_raw(sensor);
+    uint8_t scaled_value = rescale(raw_value, sensor);
+    
+    LOG_DBG("Sensor %d: raw=%d, scaled=%d", sensor, raw_value, scaled_value);
+    return scaled_value;
+}
+
+/* Make sure this function is defined before it's used */
+void hall_effect_sample_all_values(void) {
+    printk("===== HALL EFFECT SENSOR SAMPLING =====\n");
+    uint16_t min_value = 65535;
+    uint16_t max_value = 0;
+    
+    for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
+        uint16_t value = hall_effect_read_raw(i);
+        
+        printk("Sensor %d: raw=%d\n", i, value);
+        
+        if (value < min_value) min_value = value;
+        if (value > max_value) max_value = value;
+    }
+    
+    printk("Min value: %d, Max value: %d\n", min_value, max_value);
+    printk("Suggested noise_floor: %d\n", min_value + 10);
+    printk("Suggested noise_ceiling: %d\n", max_value + 500);
+    printk("===== SAMPLING COMPLETE =====\n");
+}
+
+/* Add this function to register the callback */
+int hall_effect_set_callback(const struct device *dev, kscan_callback_t callback) {
+    hall_effect_callback = callback;
+    return 0;
 } 

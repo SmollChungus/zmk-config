@@ -8,131 +8,75 @@
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/devicetree.h>
-
-#include <zmk/matrix.h>
-#include <zmk/keymap.h>
-#include <zmk/event_manager.h>
-#include <zmk/events/keycode_state_changed.h>
 #include <zephyr/drivers/kscan.h>
 
 #include "hall_effect.h"
 
 LOG_MODULE_REGISTER(matrix_hall_effect, CONFIG_ZMK_LOG_LEVEL);
 
-/* Matrix state */
-static bool matrix_state[MATRIX_ROWS][MATRIX_COLS] = {0};
+static struct k_thread scanner_thread;
+static K_KERNEL_STACK_DEFINE(scanner_stack, 1024);
+static kscan_callback_t hall_effect_callback;
+static const struct device *dev;
 
-/* Hall effect device */
-static const struct device *hall_effect_dev;
-
-/* Callback function */
-static kscan_callback_t callback;
-
-/* Timer for periodic scanning */
-static struct k_timer scan_timer;
-static bool is_scanning = false;
-
-/* Read matrix state */
-bool zmk_matrix_read_state(uint8_t row, uint8_t col) {
-    if (row >= MATRIX_ROWS || col >= MATRIX_COLS) {
-        return false;
-    }
+/* Scanner thread function */
+static void scanner_loop(void *p1, void *p2, void *p3) {
+    printk("MATRIX: Scanner thread starting\n");
     
-    return matrix_state[row][col];
+    while (1) {
+        // Call the hall effect matrix scan
+        hall_effect_matrix_scan(dev);
+        
+        k_sleep(K_MSEC(20)); // Scan every 20ms
+    }
 }
 
-/* Set matrix state */
-void zmk_matrix_set_state(uint8_t row, uint8_t col, bool state) {
-    if (row >= MATRIX_ROWS || col >= MATRIX_COLS) {
-        return;
-    }
+/* Initialize hall effect matrix */
+static int hall_effect_kscan_init(const struct device *_dev) {
+    int ret;
     
-    if (matrix_state[row][col] != state) {
-        LOG_DBG("Key state changed: row=%d, col=%d, state=%d", row, col, state);
-        matrix_state[row][col] = state;
-    }
-}
-
-/* Matrix scan callback */
-static void matrix_hall_effect_scan_cb(struct k_timer *timer) {
-    LOG_DBG("Matrix scan callback triggered");
-    bool matrix_changed = hall_effect_matrix_scan(hall_effect_dev);
+    printk("MATRIX: Initializing hall effect matrix (device: %p)\n", _dev);
+    dev = _dev;
     
-    if (matrix_changed && callback != NULL) {
-        LOG_INF("Matrix changed, notifying ZMK");
-        // Notify ZMK about key state changes
-        for (int row = 0; row < MATRIX_ROWS; row++) {
-            for (int col = 0; col < MATRIX_COLS; col++) {
-                bool state = zmk_matrix_read_state(row, col);
-                if (state) {
-                    LOG_INF("Key pressed: row=%d, col=%d", row, col);
-                }
-                callback(hall_effect_dev, row, col, state);
-            }
-        }
-    }
-}
-
-/* Configure callback */
-static int matrix_hall_effect_config(const struct device *dev, kscan_callback_t cb) {
-    LOG_DBG("Configuring hall effect matrix callback");
-    callback = cb;
-    return 0;
-}
-
-/* Enable callback */
-static int matrix_hall_effect_enable_callback(const struct device *dev) {
-    LOG_DBG("Enabling hall effect matrix callback");
-    if (!is_scanning) {
-        is_scanning = true;
-        LOG_INF("Starting matrix scan timer");
-        k_timer_start(&scan_timer, K_MSEC(10), K_MSEC(10)); // 10ms interval
-    }
-    return 0;
-}
-
-/* Disable callback */
-static int matrix_hall_effect_disable_callback(const struct device *dev) {
-    LOG_DBG("Disabling hall effect matrix callback");
-    if (is_scanning) {
-        is_scanning = false;
-        LOG_INF("Stopping matrix scan timer");
-        k_timer_stop(&scan_timer);
-    }
-    return 0;
-}
-
-/* Matrix init */
-static int matrix_hall_effect_init(const struct device *dev) {
-    LOG_INF("Initializing hall effect matrix");
-    
-    /* Store hall effect device for later use */
-    hall_effect_dev = dev;
-    
-    /* Initialize hall effect driver */
-    int ret = hall_effect_init(hall_effect_dev);
+    // Initialize the hall effect driver
+    ret = hall_effect_init(_dev);
     if (ret != 0) {
-        LOG_ERR("Failed to initialize hall effect driver: %d", ret);
+        printk("MATRIX: Failed to initialize hall effect driver: %d\n", ret);
         return ret;
     }
-    LOG_INF("Hall effect driver initialized successfully");
     
-    /* Initialize timer for regular scanning */
-    k_timer_init(&scan_timer, matrix_hall_effect_scan_cb, NULL);
+    // Start scanner thread
+    k_thread_create(&scanner_thread, scanner_stack, K_KERNEL_STACK_SIZEOF(scanner_stack),
+                    scanner_loop, NULL, NULL, NULL,
+                    K_PRIO_PREEMPT(15), 0, K_NO_WAIT);
     
-    LOG_INF("Hall effect matrix initialized successfully");
+    printk("MATRIX: Hall effect matrix initialized successfully\n");
     return 0;
 }
 
-/* Define the kscan driver API */
-static const struct kscan_driver_api matrix_hall_effect_api = {
-    .config = matrix_hall_effect_config,
-    .enable_callback = matrix_hall_effect_enable_callback,
-    .disable_callback = matrix_hall_effect_disable_callback,
+/* Configure KSCAN callback */
+static int hall_effect_kscan_configure(const struct device *_dev,
+                                      kscan_callback_t callback) {
+    printk("MATRIX: Configuring hall effect kscan callback\n");
+    hall_effect_callback = callback;
+    return 0;
+}
+
+/* KSCAN driver API structure */
+static const struct kscan_driver_api hall_effect_kscan_api = {
+    .config = hall_effect_kscan_configure,
 };
 
-/* Define the matrix device */
-DEVICE_DEFINE(zmk_matrix_hall_effect, "KSCAN_HALL_EFFECT", matrix_hall_effect_init,
-             NULL, NULL, NULL, POST_KERNEL, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT, 
-             &matrix_hall_effect_api); 
+// We need to explicitly expose the callback to hall_effect.c
+kscan_callback_t *get_hall_effect_callback_ptr(void) {
+    return &hall_effect_callback;
+}
+
+/* Register our driver for the kscan0 node */
+DEVICE_DEFINE(hall_effect_kscan, "HALL_EFFECT_MATRIX", hall_effect_kscan_init,
+              NULL, NULL, NULL, POST_KERNEL, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT,
+              &hall_effect_kscan_api);
+
+/* Verify these values match your keyboard design */
+#define MATRIX_ROWS 5  // Number of rows in your keyboard
+#define MATRIX_COLS 15 // Number of columns in your keyboard 
