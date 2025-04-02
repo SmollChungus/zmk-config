@@ -12,8 +12,9 @@ config ZMK_KEYBOARD_NAME
     default "Serene65"
 
 config ZMK_RGB_UNDERGLOW
-    select SPI
     select WS2812_STRIP
+    select PWM
+    select DMA
 
 config ZMK_USB
     default y

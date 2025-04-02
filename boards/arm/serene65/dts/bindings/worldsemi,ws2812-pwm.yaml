@@ -1,0 +1,33 @@
+# Copyright (c) 2024 Matthijs Muller
+# SPDX-License-Identifier: Apache-2.0
+
+description: WS2812 LED strip driven with PWM/DMA
+
+compatible: "worldsemi,ws2812-pwm"
+
+include: led-controller.yaml
+
+properties:
+  chain-length:
+    type: int
+    required: true
+    description: |
+      Number of LEDs in the strip
+
+  pwms:
+    type: phandle-array
+    required: true
+    description: |
+      PWM connection information for the WS2812 LED strip.
+      Specifies the controller, channel, period and flags as specified by the
+      PWM controller API.
+
+  color-mapping:
+    type: array
+    required: true
+    description: |
+      Color mapping for the LED strip.
+      Specifies the order of colors (e.g., RGB, GRB) using the LED_COLOR_ID_*
+      macros defined in dt-bindings/led/led.h.
+      LED_COLOR_ID_RED, LED_COLOR_ID_GREEN, LED_COLOR_ID_BLUE are the
+      supported values. 

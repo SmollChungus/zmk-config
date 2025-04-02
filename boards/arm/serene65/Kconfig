@@ -33,6 +33,23 @@ config ZMK_HALL_EFFECT_RAPID_TRIGGER
 	help
 	  This option enables rapid trigger support for hall effect sensors.
 
+# Custom WS2812 driver configuration options
+config WS2812_STRIP_CUSTOM
+	bool "Enable custom WS2812 LED strip driver"
+	depends on LED_STRIP
+	default y
+	help
+	  This option enables the custom WS2812 LED strip driver optimized for this keyboard.
+
+# PWM+DMA based WS2812 driver configuration
+config WS2812_STRIP_PWM_DMA
+	bool "Enable PWM+DMA based WS2812 LED strip driver"
+	depends on LED_STRIP && PWM && DMA
+	default y
+	help
+	  This option enables the PWM+DMA based WS2812 LED strip driver
+	  for better performance and USB stability.
+
 if BOARD_SERENE65
 menu "Hall Effect Configuration"
 

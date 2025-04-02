@@ -14,7 +14,7 @@
 #include <zephyr/drivers/adc.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/kscan.h>
-#include <zmk/matrix.h>
+#include <zephyr/settings/settings.h>
 
 /* Matrix dimensions */
 #define MATRIX_ROWS    5
@@ -114,15 +114,29 @@ void hall_effect_calibrate_noise_ceiling(void);
 void hall_effect_save_calibration(void);
 void hall_effect_debug_thresholds(void);
 void hall_effect_sample_all_values(void);
+uint8_t rescale(uint16_t sensor_value, uint8_t sensor_id);
+bool update_key_normal(uint8_t row, uint8_t col, uint8_t sensor_id, uint16_t sensor_value);
+bool update_key_rapid_trigger(uint8_t row, uint8_t col, uint8_t sensor_id, uint16_t sensor_value);
+void debug_adc_devices(void);
+int hall_effect_load_calibration(void);
 
-/* Matrix interface */
-bool zmk_matrix_read_state(uint8_t row, uint8_t col);
-void zmk_matrix_set_state(uint8_t row, uint8_t col, bool state);
+/* Matrix interface - local implementation */
+#define zmk_matrix_read_state(row, col) (matrix_state[row][col])
+#define zmk_matrix_set_state(row, col, state) (matrix_state[row][col] = state)
 
 /* Callback registration */
 int hall_effect_set_callback(const struct device *dev, kscan_callback_t callback);
 
 /* Add this declaration to your hall_effect.h file */
 extern kscan_callback_t *get_hall_effect_callback_ptr(void);
+
+// Default calibration values for Hall Effect sensors
+#define DEFAULT_NOISE_FLOOR 2050
+#define DEFAULT_NOISE_CEILING 3000
+#define DEFAULT_ACTUATION_THRESHOLD 80
+#define DEFAULT_RELEASE_THRESHOLD 60
+#define DEFAULT_RAPID_TRIGGER_LOW_THRESHOLD 30
+#define DEFAULT_RAPID_TRIGGER_HIGH_THRESHOLD 80
+#define RAPID_TRIGGER_POSITION_UNKNOWN 0
 
 #endif /* _HALL_EFFECT_H_ */ 

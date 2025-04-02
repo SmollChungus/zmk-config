@@ -13,15 +13,14 @@
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/kscan.h>
 #include <zephyr/input/input.h>
-
-#include <zmk/matrix.h>
-#include <zmk/keymap.h>
-#include <zmk/event_manager.h>
-#include <zmk/events/keycode_state_changed.h>
+#include <zephyr/drivers/sensor.h>
 
 #include "hall_effect.h"
+#include "rgb_driver.h"
 
 LOG_MODULE_REGISTER(hall_effect, CONFIG_ZMK_LOG_LEVEL);
+
+#define HALL_EFFECT_SENSORS 32  // Maximum number of supported hall effect sensors
 
 /* Global variables */
 static he_config_t he_config = {
@@ -76,6 +75,62 @@ bool matrix_state[MATRIX_ROWS][MATRIX_COLS] = {0};
 /* Add at the top of the file, with other global variables */
 static kscan_callback_t hall_effect_callback;
 
+/* Add this after other global and before any function definitions */
+void debug_adc_devices(void) {
+    LOG_DBG("debug_adc_devices: Listing all ADC devices.");
+    
+    for (int i = 0; i < 3; i++) {
+        char name[16];
+        snprintk(name, sizeof(name), "adc%d", i);
+        
+        const struct device *dev = device_get_binding(name);
+        if (dev) {
+            LOG_DBG("Found ADC device: %s", name);
+        } else {
+            LOG_DBG("ADC device not found: %s", name);
+        }
+    }
+}
+
+/* Settings direct load callback */
+int settings_direct_loader(const char *name, size_t len, settings_read_cb read_cb,
+                          void *cb_arg, void *param) {
+    const void *data = param;
+    size_t data_len = len;
+    int rc;
+
+    rc = read_cb(cb_arg, (void *)data, data_len);
+    if (rc < 0) {
+        return rc;
+    }
+
+    return 0;
+}
+
+/* Modify the rescale function to better handle your sensor values */
+uint8_t rescale(uint16_t sensor_value, uint8_t sensor_id) {
+    // The resting value for most sensors is around 2020-2050
+    // Most false presses show values around 2070-2100
+    uint16_t noise_floor = 2050;    // Base value when key is not pressed
+    uint16_t noise_ceiling = 3000;  // Maximum expected when fully pressed
+    
+    // Use the configured values if they're sensible
+    if (he_key_configs[sensor_id].noise_ceiling > he_key_configs[sensor_id].noise_floor) {
+        noise_floor = he_key_configs[sensor_id].noise_floor;
+        noise_ceiling = he_key_configs[sensor_id].noise_ceiling;
+    }
+
+    // If the value is below or very close to the noise floor, return 0
+    if (sensor_value <= noise_floor + 20) return 0;
+    
+    // If the value is above noise ceiling, return 100
+    if (sensor_value >= noise_ceiling) return 100;
+    
+    // Otherwise, scale to 0-100 range
+    return (uint8_t)(((uint32_t)(sensor_value - noise_floor - 20) * 100) / 
+                    (noise_ceiling - noise_floor - 20));
+}
+
 /* Initialize multiplexers */
 static int mux_init(void) {
     int ret;
@@ -125,24 +180,24 @@ static void select_mux(uint8_t sensor_id) {
     uint8_t mux_id = sensor_to_matrix_map[sensor_id].mux_id;
     uint8_t mux_channel = sensor_to_matrix_map[sensor_id].mux_channel;
     
-    LOG_DBG("select_mux: Selecting mux %d, channel %d for sensor %d", mux_id, mux_channel, sensor_id);
+    //LOG_DBG("select_mux: Selecting mux %d, channel %d for sensor %d", mux_id, mux_channel, sensor_id);
 
     /* Disable all multiplexers first */
     for (int i = 0; i < MUX_COUNT; i++) {
         gpio_pin_set(mux_en_pins[i].port, mux_en_pins[i].pin, 1);
     }
-    LOG_DBG("select_mux: All multiplexers disabled");
+    //LOG_DBG("select_mux: All multiplexers disabled");
     
     /* Set multiplexer channel */
     for (int i = 0; i < MUX_SEL_PIN_COUNT; i++) {
         gpio_pin_set(mux_sel_pins[i].port, mux_sel_pins[i].pin, 
                    (mux_channel >> i) & 0x01);
     }
-    LOG_DBG("select_mux: Channel select pins set");
+    //LOG_DBG("select_mux: Channel select pins set");
     
     /* Enable the selected multiplexer */
     gpio_pin_set(mux_en_pins[mux_id].port, mux_en_pins[mux_id].pin, 0);
-    LOG_DBG("select_mux: Multiplexer %d enabled", mux_id);
+    //LOG_DBG("select_mux: Multiplexer %d enabled", mux_id);
 
     /* Small delay to allow the multiplexer to settle */
     k_busy_wait(5);
@@ -152,48 +207,26 @@ static void select_mux(uint8_t sensor_id) {
 uint16_t hall_effect_read_raw(uint8_t sensor_id) {
     int ret;
     
-    LOG_DBG("hall_effect_read_raw: Reading sensor %d", sensor_id);
+    //if (sensor_id ==0) {
+    //    LOG_DBG("hall_effect_read_raw: Reading sensor %d", sensor_id);}
+
     select_mux(sensor_id);
 
-    LOG_DBG("hall_effect_read_raw: Starting ADC read for sensor %d", sensor_id);
+    //LOG_DBG("hall_effect_read_raw: Starting ADC read for sensor %d", sensor_id);
     ret = adc_read(adc_dev, &adc_sequence);
     if (ret != 0) {
         printk("HALL EFFECT: hall_effect_read_raw: Failed to read ADC for sensor %d: %d\n", sensor_id, ret);
         LOG_ERR("hall_effect_read_raw: Failed to read ADC for sensor %d: %d", sensor_id, ret);
         return 0;
     }
-    
-    LOG_DBG("hall_effect_read_raw: Sensor %d raw value: %d", sensor_id, adc_raw_value);
+    //if (sensor_id ==0) {
+    //    LOG_DBG("hall_effect_read_raw: Sensor %d raw value: %d", sensor_id, adc_raw_value); }
     return adc_raw_value;
 }
 
-/* Modify the rescale function to better handle your sensor values */
-static uint8_t rescale(uint16_t sensor_value, uint8_t sensor_id) {
-    // The resting value for most sensors is around 2020-2050
-    // Most false presses show values around 2070-2100
-    uint16_t noise_floor = 2050;    // Base value when key is not pressed
-    uint16_t noise_ceiling = 3000;  // Maximum expected when fully pressed
-    
-    // Use the configured values if they're sensible
-    if (he_key_configs[sensor_id].noise_ceiling > he_key_configs[sensor_id].noise_floor) {
-        noise_floor = he_key_configs[sensor_id].noise_floor;
-        noise_ceiling = he_key_configs[sensor_id].noise_ceiling;
-    }
-
-    // If the value is below or very close to the noise floor, return 0
-    if (sensor_value <= noise_floor + 20) return 0;
-    
-    // If the value is above noise ceiling, return 100
-    if (sensor_value >= noise_ceiling) return 100;
-    
-    // Otherwise, scale to 0-100 range
-    return (uint8_t)(((uint32_t)(sensor_value - noise_floor - 20) * 100) / 
-                    (noise_ceiling - noise_floor - 20));
-}
-
 /* Update key state using normal actuation mode */
-static bool update_key_normal(uint8_t row, uint8_t col, uint8_t sensor_id, 
-                            uint16_t sensor_value) {
+bool update_key_normal(uint8_t row, uint8_t col, uint8_t sensor_id, 
+                      uint16_t sensor_value) {
     bool changed = false;
     uint8_t scaled_value = rescale(sensor_value, sensor_id);
     uint8_t actuation_threshold = he_key_configs[sensor_id].actuation_threshold;
@@ -234,8 +267,8 @@ static bool update_key_normal(uint8_t row, uint8_t col, uint8_t sensor_id,
 }
 
 /* Update key state using rapid trigger mode */
-static bool update_key_rapid_trigger(uint8_t row, uint8_t col, uint8_t sensor_id, 
-                                  uint16_t sensor_value) {
+bool update_key_rapid_trigger(uint8_t row, uint8_t col, uint8_t sensor_id, 
+                            uint16_t sensor_value) {
     bool changed = false;
     uint8_t scaled_value = rescale(sensor_value, sensor_id);
     uint8_t deadzone = he_key_rapid_trigger_configs[sensor_id].deadzone;
@@ -328,23 +361,8 @@ void hall_effect_save_calibration(void) {
                      sizeof(he_key_rapid_trigger_configs));
 }
 
-/* Settings direct load callback */
-static int settings_direct_loader(const char *name, size_t len, settings_read_cb read_cb,
-                                 void *cb_arg, void *param) {
-    const void *data = param;
-    size_t data_len = len;
-    int rc;
-
-    rc = read_cb(cb_arg, data, data_len);
-    if (rc < 0) {
-        return rc;
-    }
-
-    return 0;
-}
-
 /* Load calibration data from settings */
-static int hall_effect_load_calibration(void) {
+int hall_effect_load_calibration(void) {
     int ret;
     
     /* Load hall effect configuration */
@@ -374,133 +392,91 @@ static int hall_effect_load_calibration(void) {
     return 0;
 }
 
-/* Add this function to your hall_effect.c file for debugging */
-static void debug_adc_devices(void) {
-    // List of possible ADC device paths to check
-    const char* adc_paths[] = {
-        "ADC_1",
-        "ADC1",
-        "adc@0",
-        "adc@40012000",
-        "adc1@40012000",
-        "ST_STM32_ADC_1",
-        "adc"
-    };
-    
-    printk("HALL EFFECT DEBUG: Checking for available ADC devices\n");
-    
-    for (int i = 0; i < sizeof(adc_paths)/sizeof(char*); i++) {
-        const struct device *dev = device_get_binding(adc_paths[i]);
-        printk("HALL EFFECT DEBUG: Checking %s: %s\n", 
-               adc_paths[i], 
-               dev ? "FOUND" : "NOT FOUND");
-    }
-}
-
 /* Initialize hall effect driver */
 int hall_effect_init(const struct device *dev) {
-    int err;
-    k_sleep(K_MSEC(1000));
-
-    LOG_INF("HALL EFFECT: Initializing hall effect driver");
-    printk("HALL EFFECT: Initializing hall effect driver\n");
-
-    // Add a small delay to ensure ADC subsystem is ready
-    k_sleep(K_MSEC(100));
-
-    // Get the ADC device
+    int ret;
+    
+    LOG_INF("Initializing Hall Effect sensors");
+    
+    /* Initialize ADC device */
     adc_dev = DEVICE_DT_GET(DT_NODELABEL(adc1));
     if (!device_is_ready(adc_dev)) {
         LOG_ERR("ADC device not ready");
-        printk("HALL EFFECT: ADC device not ready\n");
-        
-        // Print more detailed error information
-        printk("HALL EFFECT: ADC device pointer: %p\n", adc_dev);
-        printk("HALL EFFECT: ADC device name: %s\n", adc_dev ? adc_dev->name : "NULL");
-        
         return -ENODEV;
     }
-
-    printk("HALL EFFECT: ADC device is ready\n");
+    LOG_INF("ADC device ready");
     
-    // Set up ADC channel configuration with explicit error checking
+    /* Configure ADC channel */
     struct adc_channel_cfg channel_cfg = {
         .gain = ADC_GAIN_1,
         .reference = ADC_REF_INTERNAL,
         .acquisition_time = ADC_ACQ_TIME_DEFAULT,
-        .channel_id = 3, // Use channel 3 (ADC1_IN3)
+        .channel_id = 3,  /* PA3 is connected to ADC1_IN3 */
         .differential = 0
     };
     
-    err = adc_channel_setup(adc_dev, &channel_cfg);
-    if (err != 0) {
-        LOG_ERR("Failed to setup ADC channel: %d", err);
-        printk("HALL EFFECT: Failed to setup ADC channel: %d\n", err);
-        return err;
+    ret = adc_channel_setup(adc_dev, &channel_cfg);
+    if (ret != 0) {
+        LOG_ERR("Failed to setup ADC channel: %d", ret);
+        return ret;
     }
-
-    printk("HALL EFFECT: ADC channel setup complete\n");
-
-    // Set up ADC sequence with explicit buffer
-    adc_sequence.channels = BIT(3); // Channel 3
-    adc_sequence.buffer = &adc_raw_value;
-    adc_sequence.buffer_size = sizeof(adc_raw_value);
-    adc_sequence.resolution = 12;
-    adc_sequence.oversampling = 0;
-    adc_sequence.calibrate = false;
-
-    printk("HALL EFFECT: ADC sequence configuration complete\n");
-
-    // Initialize multiplexers
-    err = mux_init();
-    if (err != 0) {
-        LOG_ERR("Failed to initialize multiplexers: %d", err);
-        printk("HALL EFFECT: Failed to initialize multiplexers: %d\n", err);
-        return err;
-    }
-
-    // Initialize key configurations with default values
-    for (int i = 0; i < SENSOR_COUNT; i++) {
-        he_key_configs[i].noise_floor = 2050;     // Resting value
-        he_key_configs[i].noise_ceiling = 3000;   // Fully pressed value
-        he_key_configs[i].actuation_threshold = 80; // 80% to actuate (high to prevent false triggers)
-        he_key_configs[i].release_threshold = 60;   // 60% to release (provides hysteresis)
-        
-        he_key_rapid_trigger_configs[i].deadzone = 30; // 30% deadzone - increase to avoid accidental triggers
-        he_key_rapid_trigger_configs[i].rt_actuation_point = 80; // 80% actuation - higher threshold
-        he_key_rapid_trigger_configs[i].engage_distance = 10;    // 10% engage distance
-        he_key_rapid_trigger_configs[i].disengage_distance = 10; // 10% disengage distance
-    }
-
-    // Load calibration data from settings
-    settings_subsys_init();
-    settings_load();
-
-    // Set post-flash flag to true on first boot
-    if (!he_config.post_flash_flag) {
-        LOG_INF("Setting post-flash flag for first-time calibration");
-        he_config.post_flash_flag = true;
-        settings_save_one("hall_effect/config", &he_config, sizeof(he_config));
-    }
-
-    // If this is the first boot after flashing, calibrate the sensors
-    if (he_config.post_flash_flag) {
-        LOG_INF("Post-flash flag set, calibrating sensors");
-        hall_effect_calibrate_noise_floor();
-        hall_effect_calibrate_noise_ceiling();
-        he_config.post_flash_flag = false;
-        settings_save_one("hall_effect/config", &he_config, sizeof(he_config));
-    }
-
-    // Add threshold debugging at the end of initialization
-    hall_effect_debug_thresholds();
-
-    // Add this at the end of the function
-    printk("HALL EFFECT: Sampling all sensors to determine thresholds\n");
-    hall_effect_sample_all_values();
+    LOG_INF("ADC channel setup complete");
     
-    LOG_INF("Hall effect driver initialized successfully");
-    printk("HALL EFFECT: Hall effect driver initialized successfully\n");
+    /* Configure ADC sequence */
+    adc_sequence = (struct adc_sequence){
+        .channels = BIT(3),
+        .buffer = &adc_raw_value,
+        .buffer_size = sizeof(adc_raw_value),
+        .resolution = 12,
+    };
+    LOG_INF("ADC sequence configured");
+    
+    /* Initialize multiplexers */
+    ret = mux_init();
+    if (ret != 0) {
+        LOG_ERR("Failed to initialize multiplexers: %d", ret);
+        return ret;
+    }
+    LOG_INF("Multiplexers initialized");
+    
+    /* Initialize key configs with defaults */
+    for (int i = 0; i < SENSOR_COUNT; i++) {
+        he_key_configs[i] = (he_key_config_t){
+            .noise_floor = DEFAULT_NOISE_FLOOR,
+            .noise_ceiling = DEFAULT_NOISE_CEILING,
+            .actuation_threshold = DEFAULT_ACTUATION_THRESHOLD,
+            .release_threshold = DEFAULT_RELEASE_THRESHOLD
+        };
+        
+        he_key_rapid_trigger_configs[i] = (he_key_rapid_trigger_config_t){
+            .deadzone = DEFAULT_RAPID_TRIGGER_LOW_THRESHOLD,
+            .rt_actuation_point = DEFAULT_RAPID_TRIGGER_HIGH_THRESHOLD,
+            .engage_distance = 10,
+            .disengage_distance = 10
+        };
+    }
+    LOG_INF("Key configs initialized with defaults");
+    
+    /* Load previously saved calibration data if available */
+    settings_subsys_init();
+    /* TODO: Implement proper settings loading with Zephyr's settings subsystem
+     * For now, commenting out these calls that cause undefined references
+     */
+    // settings_register_direct_loader("hall_effect/config", settings_direct_loader, &he_config, sizeof(he_config));
+    // settings_register_direct_loader("hall_effect/keys", settings_direct_loader, he_key_configs, sizeof(he_key_configs));
+    settings_load();
+    LOG_INF("Settings loaded");
+    
+    /* Initialize the RGB driver */
+    ret = rgb_driver_init();
+    if (ret != 0) {
+        LOG_WRN("Failed to initialize RGB driver: %d", ret);
+        /* Continue even if RGB init fails */
+    } else {
+        LOG_INF("RGB driver initialized successfully");
+    }
+    
+    LOG_INF("Hall Effect sensor initialization complete");
     return 0;
 }
 

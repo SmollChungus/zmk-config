@@ -21,3 +21,15 @@ config ZMK_HALL_EFFECT_RAPID_TRIGGER
 	depends on ZMK_HALL_EFFECT
 	help
 	  This option enables rapid trigger mode for hall effect sensors. 
+
+
+###########################
+# LED strip driver options#
+###########################
+
+menuconfig WS2812_STRIP_CUSTOM
+	bool "Custom GPIO-based WS2812 LED strip driver"
+	depends on LED_STRIP && WS2812_STRIP
+	help
+	  Use the custom bit-banged WS2812 LED strip driver implementation
+	  for better compatibility with STM32 GPIO on PA8. 
