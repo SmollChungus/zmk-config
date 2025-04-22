@@ -13,5 +13,5 @@
 #
 ---
 include:
-  - board: icebreaker
+  - board: tft
     snippet: zmk-usb-logging #remove later
