@@ -1,0 +1,7 @@
+
+config ZMK_KEYBOARD_NAME
+	default "tft"
+
+
+config I2C
+    default y

@@ -1,0 +1,11 @@
+file_format: "1"
+id: tft
+name: TFT
+type: shield
+url: https://github.com/smollchungus
+requires: [Nice!Nano]
+exposes: [i2c_oled]
+features:
+  - keys
+  - display
+  - underglow
