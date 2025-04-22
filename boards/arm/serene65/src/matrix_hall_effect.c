@@ -12,6 +12,11 @@
 
 #include "hall_effect.h"
 
+/* For the ZMK behavior hook */
+#include <zmk/keymap.h>
+#include <zmk/endpoints.h>
+#include <zmk/behavior.h>
+
 LOG_MODULE_REGISTER(matrix_hall_effect, CONFIG_ZMK_LOG_LEVEL);
 
 static struct k_thread scanner_thread;
@@ -45,6 +50,17 @@ static int hall_effect_kscan_init(const struct device *_dev) {
         return ret;
     }
     
+    // Register with ZMK behavior system directly
+    hall_effect_callback = zmk_behavior_key_event;
+    printk("MATRIX: Directly registering ZMK behavior callback: %p\n", hall_effect_callback);
+    
+    // Explicitly register the callback with the hall effect driver
+    ret = hall_effect_set_callback(_dev, hall_effect_callback);
+    if (ret != 0) {
+        printk("MATRIX: Failed to register callback with hall effect driver: %d\n", ret);
+        return ret;
+    }
+    
     // Start scanner thread
     k_thread_create(&scanner_thread, scanner_stack, K_KERNEL_STACK_SIZEOF(scanner_stack),
                     scanner_loop, NULL, NULL, NULL,
@@ -56,9 +72,24 @@ static int hall_effect_kscan_init(const struct device *_dev) {
 
 /* Configure KSCAN callback */
 static int hall_effect_kscan_configure(const struct device *_dev,
-                                      kscan_callback_t callback) {
-    printk("MATRIX: Configuring hall effect kscan callback\n");
+                                     kscan_callback_t callback) {
+    printk("MATRIX: Configuring hall effect kscan callback %p for device %p\n", callback, _dev);
+    
+    if (!callback) {
+        printk("MATRIX: ERROR - NULL callback provided!\n");
+        return -EINVAL;
+    }
+    
     hall_effect_callback = callback;
+    
+    // Explicitly register the callback with the hall effect driver
+    int ret = hall_effect_set_callback(_dev, callback);
+    if (ret != 0) {
+        printk("MATRIX: Failed to register callback with hall effect driver: %d\n", ret);
+        return ret;
+    }
+    
+    printk("MATRIX: Successfully registered callback %p\n", callback);
     return 0;
 }
 
@@ -67,15 +98,13 @@ static const struct kscan_driver_api hall_effect_kscan_api = {
     .config = hall_effect_kscan_configure,
 };
 
-// We need to explicitly expose the callback to hall_effect.c
-kscan_callback_t *get_hall_effect_callback_ptr(void) {
-    return &hall_effect_callback;
-}
+/* Register our driver with the ZMK-specific name and node ID */
+#define DT_DRV_COMPAT zmk_kscan_gpio_direct
 
-/* Register our driver for the kscan0 node */
-DEVICE_DEFINE(hall_effect_kscan, "HALL_EFFECT_MATRIX", hall_effect_kscan_init,
-              NULL, NULL, NULL, POST_KERNEL, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT,
-              &hall_effect_kscan_api);
+DEVICE_DT_INST_DEFINE(0, hall_effect_kscan_init,
+                    NULL, NULL, NULL, 
+                    POST_KERNEL, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT,
+                    &hall_effect_kscan_api);
 
 /* Verify these values match your keyboard design */
 #define MATRIX_ROWS 5  // Number of rows in your keyboard

@@ -480,13 +480,35 @@ int hall_effect_init(const struct device *dev) {
     return 0;
 }
 
-/* Update the matrix scan function to use the callback */
+/* Add this function to register the callback */
+int hall_effect_set_callback(const struct device *dev, kscan_callback_t callback) {
+    printk("HALL EFFECT: Registering callback %p\n", callback);
+    if (!callback) {
+        printk("HALL EFFECT: Error - NULL callback provided\n");
+        return -EINVAL;
+    }
+    hall_effect_callback = callback;
+    printk("HALL EFFECT: Callback registered successfully\n");
+    return 0;
+}
+
+/* Make sure we have a proper getter function implementation */
+kscan_callback_t *get_hall_effect_callback_ptr(void) {
+    return &hall_effect_callback;
+}
+
+/* Update the matrix scan function to use the callback directly */
 bool hall_effect_matrix_scan(const struct device *dev) {
     bool matrix_changed = false;
     static uint32_t scan_count = 0;
+    static bool first_scan = true;
     
-    // Get the callback pointer
-    kscan_callback_t *callback_ptr = get_hall_effect_callback_ptr();
+    // Only print this information on the first scan
+    if (first_scan) {
+        printk("HALL EFFECT: First matrix scan with device %p\n", dev);
+        printk("HALL EFFECT: Callback address: %p\n", hall_effect_callback);
+        first_scan = false;
+    }
     
     // Log scan count occasionally for debugging
     if (scan_count++ % 100 == 0) {
@@ -521,8 +543,8 @@ bool hall_effect_matrix_scan(const struct device *dev) {
                    is_pressed ? "TRUE" : "FALSE");
             
             // Notify ZMK of the key state change using the registered callback
-            if (callback_ptr && *callback_ptr) {
-                (*callback_ptr)(dev, row, col, is_pressed);
+            if (hall_effect_callback) {
+                hall_effect_callback(dev, row, col, is_pressed);
                 printk("HALL EFFECT: Called callback for key change\n");
             } else {
                 printk("HALL EFFECT: Warning - callback not registered!\n");
@@ -655,10 +677,4 @@ void hall_effect_sample_all_values(void) {
     printk("Suggested noise_floor: %d\n", min_value + 10);
     printk("Suggested noise_ceiling: %d\n", max_value + 500);
     printk("===== SAMPLING COMPLETE =====\n");
-}
-
-/* Add this function to register the callback */
-int hall_effect_set_callback(const struct device *dev, kscan_callback_t callback) {
-    hall_effect_callback = callback;
-    return 0;
 } 

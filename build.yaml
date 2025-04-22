@@ -15,4 +15,5 @@
 include:
   - board: icebreaker
   - board: serene65
-    snippet: zmk-usb-logging #remove later
+    snippet: zmk-usb-logging
+    cmake-args: -DCONFIG_ZMK_KSCAN_MATRIX_DRIVER=y -DCONFIG_ZMK_HALL_EFFECT=y -DCONFIG_ZMK_HALL_EFFECT_CALIBRATION=y -DCONFIG_ADC=y -DCONFIG_SETTINGS=y -DCONFIG_SETTINGS_RUNTIME=y

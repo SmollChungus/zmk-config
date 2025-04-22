@@ -1,0 +1,12 @@
+# Copyright (c) 2025 Matthijs Muller
+# SPDX-License-Identifier: MIT
+
+description: Custom Hall Effect KSCAN device driver
+
+compatible: "hall_effect_kscan"
+
+include: kscan.yaml
+
+properties:
+  status:
+    required: true 
