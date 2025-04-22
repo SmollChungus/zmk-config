@@ -1,6 +1,6 @@
 file_format: "1"
 id: tft
-name: TFT
+name: tft
 type: shield
 url: https://github.com/smollchungus
 requires: [Nice!Nano]
