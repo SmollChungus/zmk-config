@@ -1,2 +1,5 @@
 # Copyright (c) 2025 Matthijs Muller
 
+config SHIELD_TFT
+    bool "TFT keyboard shield"
+

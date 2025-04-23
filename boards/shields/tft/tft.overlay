@@ -1,0 +1,7 @@
+/*
+ * Copyright (c) 2025 Matthijs Muller
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
+#include "tft.dtsi" 
