@@ -32,10 +32,10 @@
 
         default_layer {
             bindings = <
-&kp A &kp B &kp C &kp D &kp E &kp F &kp G  &kp H &kp I &kp J
-&kp A &kp B &kp C &kp D
-&kp A &kp B &kp C &kp D
-&kp A &kp B &kp C &kp D &kp E
+&kp F1 &kp F2 &kp F3 &kp F4 &kp F5 &kp F6 &kp F7  &kp F8
+&kp GRAVE &kp W &kp E &kp TAB
+&kp A &kp F &kp D &kp A
+&kp S &kp R &kp SPACE &kp Q &kp A
 
             >;
         };

@@ -17,20 +17,7 @@ manifest:
       url-base: https://github.com/zmkfirmware
     - name: smollchungus
       url-base: https://github.com/smollchungus
-    - name: petejohanson
-      url-base: https://github.com/petejohanson
-    - name: gpeye
-      url-base: https://github.com/GPeye
-    - name: mctechnology17
-      url-base: https://github.com/mctechnology17
-    - name: kevinpastor
-      url-base: https://github.com/kevinpastor
-    - name: m165437
-      url-base: https://github.com/M165437
-    - name: s6t
-      url-base: https://github.com/s6t
-    - name: infely
-      url-base: https://github.com/infely
+
   projects:
     - name: zmk
       remote: zmkfirmware

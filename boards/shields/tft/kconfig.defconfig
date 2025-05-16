@@ -5,5 +5,3 @@ config ZMK_KEYBOARD_NAME
 config I2C
     default y
 
-config ZMK_STUDIO
-    default y if SHIELD_TFT
