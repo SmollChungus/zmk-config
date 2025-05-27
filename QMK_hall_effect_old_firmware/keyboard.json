@@ -43,7 +43,7 @@
         "vid": "0x5363"
     },
     "ws2812": {
-        "driver": "pwm"
+        "driver": "spi"
     },
     "layouts": {
         "LAYOUT": {

@@ -19,13 +19,7 @@
 #define MATRIX_ROWS 5
 #define MATRIX_COLS 16
 
-// RGB Setup
-#define WS2812_DI_PIN           A8
-#define WS2812_PWM_DRIVER       PWMD1
-#define WS2812_PWM_CHANNEL      1
-#define WS2812_PWM_PAL_MODE     1
-#define WS2812_PWM_DMA_STREAM   STM32_DMA2_STREAM5
-#define WS2812_PWM_DMA_CHANNEL  6
+
 
 // Analog setup
 #define ANALOG_PORT A3

@@ -16,7 +16,6 @@
 #include <zephyr/drivers/sensor.h>
 
 #include "hall_effect.h"
-#include "rgb_driver.h"
 
 LOG_MODULE_REGISTER(hall_effect, CONFIG_ZMK_LOG_LEVEL);
 
@@ -467,14 +466,7 @@ int hall_effect_init(const struct device *dev) {
     settings_load();
     LOG_INF("Settings loaded");
     
-    /* Initialize the RGB driver */
-    ret = rgb_driver_init();
-    if (ret != 0) {
-        LOG_WRN("Failed to initialize RGB driver: %d", ret);
-        /* Continue even if RGB init fails */
-    } else {
-        LOG_INF("RGB driver initialized successfully");
-    }
+
     
     LOG_INF("Hall Effect sensor initialization complete");
     return 0;

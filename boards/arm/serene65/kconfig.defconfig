@@ -13,8 +13,7 @@ config ZMK_KEYBOARD_NAME
 
 config ZMK_RGB_UNDERGLOW
     select WS2812_STRIP
-    select PWM
-    select DMA
+    select SPI
 
 config ZMK_USB
     default y
@@ -71,6 +70,9 @@ endif # USB
 if ZMK_RGB_UNDERGLOW
 
 config WS2812_STRIP
+    default y
+    
+config SPI
     default y
 
 endif # ZMK_RGB_UNDERGLOW

@@ -18,8 +18,8 @@
         zephyr,sram = &sram0;
         zephyr,flash = &flash0;
         zmk,matrix_transform = &default_transform;
-        zmk,underglow = &ws2812;
-        zmk,underglow-chain-length = <1>;
+        zmk,underglow = &led_strip;
+        zephyr,usb-device = &zephyr_udc0;
     };
     
 
@@ -50,13 +50,7 @@
         triggers-per-rotation = <20>;
     };
 
-    ws2812: ws2812 {
-        compatible = "worldsemi,ws2812-strip";
-        chain-length = <1>;
-        pwms = <&pwm1 1 1250000 PWM_POLARITY_NORMAL>;
-        color-mapping = <LED_COLOR_ID_GREEN LED_COLOR_ID_RED LED_COLOR_ID_BLUE>;
-        status = "okay";
-    };
+
 };
 
 &adc1 {
@@ -76,15 +70,12 @@
     };
 };
 
-&timers1 {
+
+zephyr_udc0: &usbotg_fs {
     status = "okay";
-    st,prescaler = <0>;
-    
-    pwm1: pwm {
-        status = "okay";
-        pinctrl-0 = <&tim1_ch1_pa8>;
-        pinctrl-names = "default";
-    };
+    pinctrl-0 = <&usb_otg_fs_dm_pa11 &usb_otg_fs_dp_pa12>;
+    pinctrl-names = "default";
+    num-bidir-endpoints = <4>;
 };
 
 &dma1 {
@@ -117,13 +108,6 @@
     apb2-prescaler = <1>;
 };
 
-zephyr_udc0: &usbotg_fs {
-    status = "okay";
-    pinctrl-0 = <&usb_otg_fs_dm_pa11 &usb_otg_fs_dp_pa12>;
-    pinctrl-names = "default";
-    num-bidir-endpoints = <4>;
-};
-
 &rtc {
     status = "okay";
 };
@@ -136,5 +120,24 @@ zephyr_udc0: &usbotg_fs {
         storage_partition: partition@1e800 {
             reg = <0x0001e800 0x00001800>;
         };
+    };
+};
+
+&spi1 {
+    status = "okay";
+    pinctrl-0 = <&spi1_sck_pa5 &spi1_miso_pa6 &spi1_mosi_pa7>;
+    pinctrl-names = "default";
+    
+    led_strip: ws2812@0 {
+        compatible = "worldsemi,ws2812-spi";
+        reg = <0>;
+        spi-max-frequency = <4000000>;
+        chain-length = <1>; /* single LED for testing */
+        spi-one-frame = <0x70>;
+        spi-zero-frame = <0x40>;
+        color-mapping = <LED_COLOR_ID_GREEN
+                        LED_COLOR_ID_RED
+                        LED_COLOR_ID_BLUE>;
+        status = "okay";
     };
 };

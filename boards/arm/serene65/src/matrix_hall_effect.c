@@ -13,7 +13,6 @@
 #include "hall_effect.h"
 
 /* For the ZMK behavior hook */
-#include <zmk/keymap.h>
 #include <zmk/endpoints.h>
 #include <zmk/behavior.h>
 
