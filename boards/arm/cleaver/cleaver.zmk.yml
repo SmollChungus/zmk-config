@@ -1,11 +1,10 @@
 file_format: "1"
-id: icebreaker
-name: icebreaker
+id: cleaver
+name: cleaver
 type: board
 arch: arm
 features:
   - keys
-  - encoder
 outputs:
   - usb
 url: https://github.com/smollchungus

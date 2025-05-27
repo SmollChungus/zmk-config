@@ -1,5 +1,5 @@
-identifier: icebreaker
-name: icebreaker
+identifier: cleaver
+name: cleaver
 type: mcu
 arch: arm
 toolchain:

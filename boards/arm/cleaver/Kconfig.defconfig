@@ -1,22 +1,19 @@
 # Copyright (c) 2020 The ZMK Contributors
 # SPDX-License-Identifier: MIT
 
-if BOARD_ICEBREAKER
+if BOARD_CLEAVER
 
 config ZMK_KEYBOARD_NAME
-	default "icebreaker"
+	default "cleaver"
 
-config USB_NRFX
-	default y
+
+# 72MHz system clock
+CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC=72000000
+
 
 config USB_DEVICE_STACK
 	default y
 
-config BT_CTLR
-	default BT
-
-config ZMK_BLE
-	default y
 
 config ZMK_USB
 	default y
@@ -24,8 +21,4 @@ config ZMK_USB
 config I2C
 	default y
 
-config MAX17048
-	default y
-
-
-endif # BOARD_ICEBREAKER
+endif # BOARD_CLEAVER

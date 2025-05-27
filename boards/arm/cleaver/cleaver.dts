@@ -1,0 +1,178 @@
+/*
+ * Copyright (c) 2020 The ZMK Contributors
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
+/dts-v1/;
+#include <st/f4/stm32f411Xe.dtsi>
+#include <st/f4/stm32f411c(c-e)ux-pinctrl.dtsi>
+#include <dt-bindings/zmk/matrix_transform.h>
+#include <dt-bindings/led/led.h>
+
+/ {
+	model = "cleaver, rev_1"; 
+	compatible = "cleaver,rev_1";
+
+	chosen {
+		zephyr,code-partition = &code_partition;
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+		zmk,kscan = &kscan0;
+		zmk,matrix_transform = &default_transform;
+        zephyr,usb-device = &zephyr_udc0;
+	};
+
+	default_transform: keymap_transform_0 {
+		compatible = "zmk,matrix-transform";
+		columns = <15>;
+		rows = <5>;
+		map = <
+			RC(0,0)	RC(0,1)	RC(0,2)	RC(0,3)	RC(0,4)	RC(0,5)	RC(0,6)	RC(0,7)	RC(0,8)	RC(0,9)	RC(0,10) RC(0,11) RC(0,12) RC(0,13) RC(2,13) RC(0,14)
+			RC(1,0)	RC(1,1)	RC(1,2)	RC(1,3)	RC(1,4)	RC(1,5)	RC(1,6)	RC(1,7)	RC(1,8)	RC(1,9)	RC(1,10) RC(1,11) RC(1,12) RC(1,13) RC(1,14)
+			RC(2,0)	RC(2,1)	RC(2,2)	RC(2,3)	RC(2,4)	RC(2,5)	RC(2,6)	RC(2,7)	RC(2,8)	RC(2,9)	RC(2,10) RC(2,11) RC(2,12)          RC(2,14)
+			RC(3,0)	RC(3,1)	RC(3,2)	RC(3,3)	RC(3,4)	RC(3,5)	RC(3,6)	RC(3,7)	RC(3,8)	RC(3,9)	RC(3,10) RC(3,11) RC(3,12) RC(3,13) RC(3,14)
+			RC(4,0)	RC(4,1) RC(4,2)		                         	RC(4,6)	                RC(4,10) RC(4,11) RC(4,12) RC(4,13) RC(4,14)
+			>;
+	};
+
+ 
+	kscan0: kscan {
+		compatible = "zmk,kscan-gpio-matrix";
+		diode-direction = "col2row";
+		row-gpios
+			= <&gpioa 3 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+			, <&gpiob 13 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+			, <&gpiob 0 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+			, <&gpiob 1 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+			, <&gpiob 11 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+			;
+		col-gpios
+			= <&gpioa 0 GPIO_ACTIVE_HIGH>
+			, <&gpioa 6 GPIO_ACTIVE_HIGH>
+			, <&gpioa 8 GPIO_ACTIVE_HIGH>
+			, <&gpioa 4 GPIO_ACTIVE_HIGH>
+			, <&gpioa 7 GPIO_ACTIVE_HIGH>
+			, <&gpiob 8 GPIO_ACTIVE_HIGH>
+			, <&gpioa 9 GPIO_ACTIVE_HIGH>
+			, <&gpioa 10 GPIO_ACTIVE_HIGH>
+			, <&gpiob 6 GPIO_ACTIVE_HIGH>
+			, <&gpiob 4 GPIO_ACTIVE_HIGH>
+			, <&gpiob 2 GPIO_ACTIVE_HIGH>
+			, <&gpioa 0 GPIO_ACTIVE_HIGH>
+			, <&gpioa 1 GPIO_ACTIVE_HIGH>
+			, <&gpioa 5 GPIO_ACTIVE_HIGH>
+			, <&gpiob 9 GPIO_ACTIVE_HIGH>
+			;
+	};
+};
+
+&gpioa {
+	status = "okay";
+};
+
+&gpiob {
+	status = "okay";
+};
+
+
+zephyr_udc0: &usbotg_fs {
+    status = "okay";
+    pinctrl-0 = <&usb_otg_fs_dm_pa11 &usb_otg_fs_dp_pa12>;
+    pinctrl-names = "default";
+    num-bidir-endpoints = <4>;
+};
+
+&clk_hse {
+    status = "okay";
+    clock-frequency = <DT_FREQ_M(8)>;
+};
+
+&pll {
+    status = "okay";
+    div-m = <4>;
+    mul-n = <72>;
+    div-p = <2>;
+    div-q = <3>;
+    clocks = <&clk_hse>;
+};
+
+&rcc {
+    clocks = <&pll>;
+    clock-frequency = <DT_FREQ_M(72)>;
+    ahb-prescaler = <1>;
+    apb1-prescaler = <2>;
+    apb2-prescaler = <1>;
+};
+
+&rtc {
+    status = "okay";
+};
+
+&flash0 {
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		boot_partition: partition@0 {
+			label = "bootloader";
+			reg = <0x00000000 0x00010000>;
+			read-only;
+		};
+
+		code_partition: partition@10000 {
+			label = "code_partition";
+			reg = <0x00010000 0x000E0000>;
+		};
+
+		storage_partition: partition@F0000 {
+			label = "storage";
+			reg = <0x000F0000 0x00010000>;
+		};
+	};
+};
+
+/*
+&pinctrl {
+    spi1_default: spi1_default {
+        group1 {
+            pinmux = <STM32_PINMUX('A', 5, AF5)>; 
+            bias-pull-down;
+            slew-rate = "very-high-speed";
+        };
+        group2 {
+            pinmux = <STM32_PINMUX('A', 7, AF5)>; 
+            bias-pull-down;
+            slew-rate = "very-high-speed";
+        };
+    };
+};
+*/
+
+
+&spi1 {
+    status = "okay";
+    pinctrl-0 = <&spi1_sck_pa5 &spi1_miso_pa6 &spi1_mosi_pa7>;
+    pinctrl-names = "default";
+    
+    led_strip: ws2812@0 {
+        compatible = "worldsemi,ws2812-spi";
+        reg = <0>;
+        spi-max-frequency = <4000000>;
+        chain-length = <1>; /* single LED for testing */
+        spi-one-frame = <0x70>;
+        spi-zero-frame = <0x40>;
+        color-mapping = <LED_COLOR_ID_GREEN
+                        LED_COLOR_ID_RED
+                        LED_COLOR_ID_BLUE>;
+        status = "okay";
+    };
+};
+
+/ {
+    chosen {
+        zmk,underglow = &led_strip;
+    };
+};
+
