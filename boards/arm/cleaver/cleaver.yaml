@@ -9,7 +9,9 @@ toolchain:
 supported:
   - adc
   - usb_device
-  - ble
-  - ieee802154
   - pwm
-  - watchdog
+  - uart
+  - i2c
+  - usb
+  - spi
+  - counter

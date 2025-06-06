@@ -5,3 +5,5 @@
 include(${ZEPHYR_BASE}/boards/common/openocd.board.cmake)
 include(${ZEPHYR_BASE}/boards/common/stm32flash.board.cmake)
 include(${ZEPHYR_BASE}/boards/common/dfu-util.board.cmake)
+
+board_runner_args(dfu-util "--pid=0483:df11" "--alt=0" "--dfuse")

@@ -9,13 +9,32 @@ CONFIG_BOARD_CLEAVER=y
 # Enable MPU
 CONFIG_ARM_MPU=y
 
+# Enable HW stack protection
+CONFIG_HW_STACK_PROTECTION=y
+
+# Serial Drivers
+CONFIG_SERIAL=y
+CONFIG_UART_INTERRUPT_DRIVEN=y
+CONFIG_CONSOLE=y
+CONFIG_UART_CONSOLE=y
+
+
+# Clock configuration
+CONFIG_CLOCK_CONTROL=y
+
+# enable pin controller
+CONFIG_PINCTRL=y
+
 # Enable GPIO
 CONFIG_GPIO=y
-CONFIG_LED=y
-CONFIG_LED_GPIO=y
+
+# Only enable LED_GPIO if you have GPIO LEDs configured in DTS
+# CONFIG_LED=y
+# CONFIG_LED_GPIO=y
 
 CONFIG_REBOOT=y
 
+# Enable necessary configurations for USB to work
 CONFIG_MPU_ALLOW_FLASH_WRITE=y
 CONFIG_NVS=y
 CONFIG_SETTINGS_NVS=y
@@ -24,10 +43,18 @@ CONFIG_FLASH_PAGE_LAYOUT=y
 CONFIG_FLASH_MAP=y
 
 
-CONFIG_PINCTRL=y
+# USB Configuration
+CONFIG_USB_DEVICE_STACK=y
+CONFIG_USB_DEVICE_MANUFACTURER="ZMK Project"
+CONFIG_USB_DEVICE_PRODUCT="Cleaver Keyboard"
+CONFIG_USB_DEVICE_VID=0x1D50
+CONFIG_USB_DEVICE_PID=0x615E
 
 # Windows Battery Reporting Fix
 CONFIG_BT_GATT_ENFORCE_SUBSCRIPTION=n
+
+# Settings configuration
+CONFIG_SETTINGS=y
 
 # Turn on logging, and set ZMK logging to debug output
 # CONFIG_LOG=y

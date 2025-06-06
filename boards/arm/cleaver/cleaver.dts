@@ -15,12 +15,13 @@
 	compatible = "cleaver,rev_1";
 
 	chosen {
-		zephyr,code-partition = &code_partition;
+		zephyr,console = &usart1;
+		zephyr,shell-uart = &usart1;
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
 		zmk,kscan = &kscan0;
 		zmk,matrix_transform = &default_transform;
-        zephyr,usb-device = &zephyr_udc0;
+		zmk,underglow = &led_strip;
 	};
 
 	default_transform: keymap_transform_0 {
@@ -59,7 +60,7 @@
 			, <&gpiob 6 GPIO_ACTIVE_HIGH>
 			, <&gpiob 4 GPIO_ACTIVE_HIGH>
 			, <&gpiob 2 GPIO_ACTIVE_HIGH>
-			, <&gpioa 0 GPIO_ACTIVE_HIGH>
+			, <&gpiob 10 GPIO_ACTIVE_HIGH>
 			, <&gpioa 1 GPIO_ACTIVE_HIGH>
 			, <&gpioa 5 GPIO_ACTIVE_HIGH>
 			, <&gpiob 9 GPIO_ACTIVE_HIGH>
@@ -75,7 +76,7 @@
 	status = "okay";
 };
 
-
+/* USB configuration */
 zephyr_udc0: &usbotg_fs {
     status = "okay";
     pinctrl-0 = <&usb_otg_fs_dm_pa11 &usb_otg_fs_dp_pa12>;
@@ -83,9 +84,10 @@ zephyr_udc0: &usbotg_fs {
     num-bidir-endpoints = <4>;
 };
 
+/* Clock configuration for 8MHz external oscillator */
 &clk_hse {
     status = "okay";
-    clock-frequency = <DT_FREQ_M(8)>;
+    clock-frequency = <DT_FREQ_M(8)>;  /* 8MHz external oscillator */
 };
 
 &pll {
@@ -116,40 +118,59 @@ zephyr_udc0: &usbotg_fs {
 		#size-cells = <1>;
 
 		boot_partition: partition@0 {
-			label = "bootloader";
-			reg = <0x00000000 0x00010000>;
+			label = "mcuboot";
+			reg = <0x00000000 DT_SIZE_K(32)>;
 			read-only;
 		};
 
-		code_partition: partition@10000 {
-			label = "code_partition";
-			reg = <0x00010000 0x000E0000>;
+		/*
+		 * The flash starting at offset 0x00008000 and ending at
+		 * offset 0x0001ffff (sectors 2 through 4) is reserved for
+		 * use by the application.
+		 */
+
+		slot0_partition: partition@20000 {
+			label = "image-0";
+			reg = <0x00020000 DT_SIZE_K(128)>;
+		};
+		slot1_partition: partition@40000 {
+			label = "image-1";
+			reg = <0x00040000 DT_SIZE_K(128)>;
+		};
+		scratch_partition: partition@60000 {
+			label = "image-scratch";
+			reg = <0x00060000 DT_SIZE_K(128)>;
 		};
 
-		storage_partition: partition@F0000 {
+		storage_partition: partition@80000 {
 			label = "storage";
-			reg = <0x000F0000 0x00010000>;
+			reg = <0x00080000 DT_SIZE_K(64)>;
 		};
 	};
 };
 
-/*
-&pinctrl {
-    spi1_default: spi1_default {
-        group1 {
-            pinmux = <STM32_PINMUX('A', 5, AF5)>; 
-            bias-pull-down;
-            slew-rate = "very-high-speed";
-        };
-        group2 {
-            pinmux = <STM32_PINMUX('A', 7, AF5)>; 
-            bias-pull-down;
-            slew-rate = "very-high-speed";
-        };
-    };
+&timers4 {
+	status = "okay";
+	pwm4: pwm {
+		status = "okay";
+		pinctrl-0 = <&tim4_ch1_pb6 &tim4_ch2_pb7>;
+		pinctrl-names = "default";
+	};
 };
-*/
 
+&usart1 {
+	pinctrl-0 = <&usart1_tx_pa9 &usart1_rx_pa10>;
+	pinctrl-names = "default";
+	status = "okay";
+	current-speed = <115200>;
+};
+
+&i2c1 {
+	pinctrl-0 = <&i2c1_scl_pb8 &i2c1_sda_pb9>;
+	pinctrl-names = "default";
+	status = "okay";
+	clock-frequency = <I2C_BITRATE_FAST>;
+};
 
 &spi1 {
     status = "okay";
@@ -167,12 +188,6 @@ zephyr_udc0: &usbotg_fs {
                         LED_COLOR_ID_RED
                         LED_COLOR_ID_BLUE>;
         status = "okay";
-    };
-};
-
-/ {
-    chosen {
-        zmk,underglow = &led_strip;
     };
 };
 
