@@ -33,7 +33,7 @@
                 &kp LSHFT &kp K_MUTE  &kp Z   &kp X     &kp C    &kp V     &kp B    &kp N    &kp M     &kp COMMA &kp DOT  &kp SLASH  &kp RSHFT  &kp UP    &mo 1     
                 &kp LCTL  &kp LGUI   &kp LALT &kp SPACE &kp RALT &kp RCTRL &kp LEFT &kp DOWN &kp RIGHT   
             >;
-            sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP>;
+            sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN>;
         };
 
         1 {
@@ -48,11 +48,11 @@
         
         2 {
             bindings = <
-                &bootloader &kp N1     &kp N2     &kp N3    &kp N4   &kp N5    &kp N6     &kp N7       &kp N8    &kp N9    &kp N0   &kp MINUS &kp EQUAL &kp BSLH   &kp DEL      &kp GRAVE
-                &kp TAB     &bt BT_PRV &bt BT_NXT &kp E     &kp R    &kp T     &kp Y      &kp U        &kp I     &kp O     &kp P    &kp LBKT  &kp RBKT  &kp BSPC   &kp HOME   
-                &kp CAPS    &kp A      &kp S      &kp D     &kp F    &kp G     &kp H      &kp J        &kp K     &kp L     &kp SEMI &kp SQT   &kp ENTER &kp END
-                &kp LSHFT   &kp K_MUTE &bt BT_CLR &kp X     &kp C    &kp V     &kp B      &kp N        &kp M     &kp COMMA &kp DOT  &kp SLASH &kp RSHFT &kp UP     &mo 1       
-                &kp LCTL    &kp LGUI   &kp LALT   &kp SPACE &kp RALT &kp RCTRL &kp C_PREV &kp C_VOL_DN &kp C_NEXT  
+                &bootloader &kp N1     &kp N2     &kp N3         &kp N4   &kp N5    &kp N6     &kp N7       &kp N8    &kp N9    &kp N0   &kp MINUS &kp EQUAL &kp BSLH   &kp DEL      &kp GRAVE
+                &kp TAB     &bt BT_PRV &bt BT_NXT &kp E          &kp R    &kp T     &kp Y      &kp U        &kp I     &kp O     &kp P    &kp LBKT  &kp RBKT  &kp BSPC   &kp HOME   
+                &kp CAPS    &kp A      &kp S      &kp D          &kp F    &kp G     &kp H      &kp J        &kp K     &kp L     &kp SEMI &kp SQT   &kp ENTER &kp END
+                &kp LSHFT   &kp K_MUTE &bt BT_CLR &bt BT_CLR_ALL &kp C    &kp V     &kp B      &kp N        &kp M     &kp COMMA &kp DOT  &kp SLASH &kp RSHFT &kp UP     &mo 1       
+                &kp LCTL    &kp LGUI   &kp LALT   &kp SPACE      &kp RALT &kp RCTRL &kp C_PREV &kp C_VOL_DN &kp C_NEXT  
             >;
         };
     };
